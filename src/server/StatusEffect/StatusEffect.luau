@@ -28,6 +28,31 @@ export type RegisterEffectArgs = {
 	CanKill: boolean,
 }
 
+export type EffectContext = {
+	Target: Humanoid,
+	--Effect: EffectInstance,
+
+	Stacks: number,
+
+	Damage: (self: EffectContext, amount: number) -> (),
+	Remove: (self: EffectContext) -> (),
+	Refresh: (self: EffectContext) -> (),
+	AddStacks: (self: EffectContext, amount: number) -> (),
+}
+
+export type EffectDefinition = {
+	Duration: number?,
+	Interval: number?,
+
+	MaxStacks: number?,
+	StackBehavior: "Refresh" | "Stack" | "Ignore"?,
+
+	-- Functions that step through the effect's lifecycle
+	OnApply: (() -> ())?,
+	OnTick: (() -> ())?,
+	OnRemove: (() -> ())?,
+}
+
 --[[
 -- Register an effect to be used on a humanoid later.
 -- A bool and string is returned for the success of registering and the now valid effect string.
