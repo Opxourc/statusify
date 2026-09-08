@@ -7,6 +7,18 @@ StatusEffect.__index = StatusEffect
 StatusEffect.CurrentObject = nil
 StatusEffect.Debugging = RunService:IsStudio()
 
+export type EventMessages = {
+	Presist: string,
+	Remove: string,
+	Burst: string,
+}
+
+export type ConstructorDependencies = {
+	RemoteEvent: RemoteEvent,
+	EventMessages: EventMessages,
+	MaxNumberPerHumanoid: number?,
+}
+
 --[[
 	Create an object of StatusEffect type to start managing the lifecycle of status effects.
 	The reference of the object can be later referenced in StatusEffect.CurrentObject.
@@ -17,10 +29,11 @@ StatusEffect.Debugging = RunService:IsStudio()
 	Arguements:
 		remoteEvent - The RemoteEvent instance that will be used to send replication requests to the client. 
 			Be sure to have a handler on the client to catch these events!
+		eventNames - The names/messages that will be used for the RemoveEvent to send for precise replication.
 		maxNumberPerHumanoid - The max number of events statuses a humanoid to have.
 			By default, this value is capped at 3.
 ]]
-function StatusEffect.New(remoteEvent: RemoteEvent, maxNumberPerHumanoid: number?)
+function StatusEffect.New(dependencies: ConstructorDependencies)
 	if StatusEffect.CurrentObject then
 		warn(
 			"Attempted to create a StatusEffect object when one already exists. Reference 'StatusEffect.CurrentObject' instead to get the object."
@@ -30,8 +43,9 @@ function StatusEffect.New(remoteEvent: RemoteEvent, maxNumberPerHumanoid: number
 
 	local self = setmetatable({}, StatusEffect)
 
-	self.MaxNumberPerHumanoid = maxNumberPerHumanoid or 3
-	self.RemoteEvent = remoteEvent -- This will be used to send replication events to the client
+	self.EventMessages = dependencies.EventMessages
+	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or 3
+	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to the client
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
 	self.JanitorConnections = {} :: { RBXScriptConnection }
@@ -43,7 +57,7 @@ function StatusEffect.New(remoteEvent: RemoteEvent, maxNumberPerHumanoid: number
 		for humanoid, activeEffects in self.ActiveEffects do
 			for effectName, effect in activeEffects do
 				if now >= effect.ExpireTime then
-					activeEffects[effectName] = nil
+					self:_removeFromActive(humanoid, effectName)
 
 					if effect.Definition.OnRemove then
 						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
@@ -230,18 +244,11 @@ function StatusEffect:_createJanitor(): boolean
 		end)
 	end
 
-	local function resetAttributes(player: Player)
-		player:SetAttribute(self.PresistentEffectAttribute, "")
-		player:SetAttribute(self.BurstEffectAttribute, "")
-	end
-
 	-- Connection to catch incoming players
 	self.JanitorConnections[#self.JanitorConnections + 1] = Players.PlayerAdded:Connect(function(player)
-		resetAttributes(player)
 		createDiedEvent(getHumanoid(player))
 
 		player.CharacterAdded:Connect(function(character)
-			resetAttributes(player)
 			createDiedEvent(getHumanoid(player))
 		end)
 	end)
@@ -260,6 +267,20 @@ function StatusEffect:_createJanitor(): boolean
 	end
 
 	return true
+end
+
+function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
+	local effects = self.ActiveEffects[humanoid]
+	if not effects then
+		return
+	end
+
+	if effects[effectName] then
+		effects[effectName] = nil
+
+		local players = Players:GetPlayerFromCharacter(humanoid.Parent)
+		self.RemoteEvent:FireAllClients(players, self.EventMessages.Remove, effectName)
+	end
 end
 
 --[[
@@ -369,6 +390,9 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		definition.OnApply(self:_createContext(humanoid, effect))
 	end
 
+	local player = Players:GetPlayerFromCharacter(humanoid.Parent)
+	self.RemoteEvent:FireAllClients(player, self.EventMessages.Presist, effectName)
+
 	return true
 end
 
@@ -386,20 +410,27 @@ end
 			You do not need to set this parameter if the action is 'all'.
 ]]
 function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", effectName: string?): boolean
-	if action == "one" and not effectName then
-		outputMessage(
-			"warn",
-			`Attempted to clear an effect from ({humanoid:GetFullName()}) despite no effectName being given.`
-		)
-		return false
-	end
+	if action == "one" then
+		if not effectName then
+			outputMessage(
+				"warn",
+				`Attempted to clear an effect from ({humanoid:GetFullName()}) despite no effectName being given.`
+			)
+			return false
+		end
 
-	local existingEffects = self.ActiveEffects[humanoid]
-	if action == "one" and existingEffects[effectName] then
-		existingEffects[effectName] = nil
-	end
+		self:_removeFromActive(humanoid, effectName)
+		return true
+	elseif action == "all" then
+		local effects = self.ActiveEffects[humanoid]
+		if not effects then
+			return false
+		end
 
-	-- TODO:
+		for name in effects do
+			self:_removeFromActive(humanoid, name)
+		end
+	end
 
 	return true
 end
