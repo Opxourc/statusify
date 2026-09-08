@@ -48,6 +48,9 @@ function StatusEffect.New()
 		end
 	end)
 
+	self:_createJanitor()
+	StatusEffect.CurrentObject = self
+	table.freeze(StatusEffect)
 	return self
 end
 
@@ -358,4 +361,4 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	return true
 end
 
-return table.freeze(StatusEffect)
+return StatusEffect
