@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
@@ -20,7 +21,30 @@ function StatusEffect.New()
 	local self = setmetatable({}, StatusEffect)
 
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
-	self.ActiveHumanoids = {} :: { [Humanoid]: EffectInstance } -- Effects that are currently running on a humanoid
+	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
+
+	-- Connection that runs the lifecycle of currently running effects
+	RunService.Heartbeat:Connect(function()
+		local now = workspace:GetServerTimeNow()
+
+		for humanoid, activeEffects in self.ActiveEffects do
+			for effectName, effect in activeEffects do
+				if now >= effect.ExpireTime then
+					activeEffects[effectName] = nil
+
+					if effect.Definition.OnRemove then
+						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
+					end
+				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
+					effect.NextTickTime = now + effect.Definition.Interval
+
+					if effect.Definition.OnTick then
+						effect.Definition.OnTick(self:_createContext(humanoid, effect))
+					end
+				end
+			end
+		end
+	end)
 
 	return self
 end
@@ -41,10 +65,11 @@ export type EffectContext = {
 -- The contract for a live effect that is running
 export type EffectInstance = {
 	Definition: EffectDefinition,
-	Target: Humanoid,
+	Name: string,
 	Stacks: number,
 	StartTime: number,
 	ExpireTime: number,
+	NextTickTime: number,
 }
 
 -- Describes the template for an effect
@@ -53,7 +78,10 @@ export type EffectDefinition = {
 	Interval: number?, -- How fast ticks should be applied during the duration
 
 	MaxStacks: number?,
-	StackBehavior: "Refresh" | "Stack" | "Ignore"?,
+	StackBehavior: "refresh" | "stack" | "ignore"?,
+	-- refresh - Reset duration
+	-- stack - Increase the number of stacks by 1 unless capped
+	-- ignore - Do nothing
 
 	-- Functions that step through the effect's lifecycle
 	OnApply: ((context: EffectContext) -> ())?, -- The moment an effect goes live
@@ -65,7 +93,7 @@ const EFFECT_DEFINITION_DEFAULTS = {
 	Duration = 5,
 	Interval = 1,
 	MaxStacks = math.huge,
-	StackBehavior = "Refresh",
+	StackBehavior = "refresh",
 }
 table.freeze(EFFECT_DEFINITION_DEFAULTS)
 
@@ -112,7 +140,7 @@ local function validateDefinition(effectName: string, definition: EffectDefiniti
 		useDefault("Duration")
 	end
 
-	if type(normalizedDefinition.Interval) ~= "number" or normalizedDefinition.Interval <= 0 then
+	if type(normalizedDefinition.Interval) ~= "number" or normalizedDefinition.Interval < 0 then
 		useDefault("Interval")
 	elseif
 		normalizedDefinition.Interval ~= normalizedDefinition.Interval or normalizedDefinition.Interval == math.huge
@@ -133,9 +161,9 @@ local function validateDefinition(effectName: string, definition: EffectDefiniti
 	end
 
 	if
-		normalizedDefinition.StackBehavior ~= "Refresh"
-		and normalizedDefinition.StackBehavior ~= "Stack"
-		and normalizedDefinition.StackBehavior ~= "Ignore"
+		normalizedDefinition.StackBehavior ~= "refresh"
+		and normalizedDefinition.StackBehavior ~= "stack"
+		and normalizedDefinition.StackBehavior ~= "ignore"
 	then
 		useDefault("StackBehavior")
 	end
@@ -169,7 +197,7 @@ end
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	if self.RegisteredEffects[effectName] then
 		warn(`Attempted to register "{effectName}" when it's already registered.`)
-		return false, nil
+		return false
 	end
 
 	definition = validateDefinition(effectName, definition)
@@ -178,16 +206,89 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 	return true
 end
 
--- Apply a valid effect onto
-function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string)
-	-- Create a humanoid.Died event in case they die while this effect is active
-	local effectInfo = self.RegisteredEffects[effectName]
-	if not effectInfo then
-		warn(
-			`Attempted to apply an status effect onto ({humanoid:GetFullName()}) when the effect wasn't registered yet!`
-		)
-		return
+--[[
+	Create the context for an effect.
+]]
+function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance): EffectContext
+	return {
+		Target = humanoid,
+		Effect = effect,
+		Stacks = effect.Stacks,
+		Damage = function(_, amount: number)
+			humanoid:TakeDamage(amount)
+		end,
+		Remove = function()
+			local activeEffects = self.ActiveEffects[humanoid]
+			if activeEffects and activeEffects[effect.Name] == effect then
+				activeEffects[effect.Name] = nil
+				if effect.Definition.OnRemove then
+					effect.Definition.OnRemove(self:_createContext(humanoid, effect))
+				end
+			end
+		end,
+		Refresh = function()
+			effect.ExpireTime = workspace:GetServerTimeNow() + (effect.Definition.Duration :: number)
+		end,
+		AddStacks = function(_, amount: number)
+			effect.Stacks = math.min(effect.Stacks + amount, effect.Definition.MaxStacks :: number)
+		end,
+	}
+end
+
+--[[
+	Apply an effect status onto a humanoid.
+
+	Return:
+		boolean - The success of the application. True if successful, false otherwise.
+
+	Arguements:
+		humanoid - The humanoid instance to apply the effect onto.
+		effectName - The effect that will be applied to the humanoid. 
+			This name should be registered first before using this method!
+]]
+function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
+	local definition = self.RegisteredEffects[effectName]
+	if not definition then
+		outputMessage("warn", `Attempted to apply unregistered effect "{effectName}" onto ({humanoid:GetFullName()})`)
+		return false
 	end
 
-	-- TODO: Apply effect
+	local now = workspace:GetServerTimeNow()
+	local activeEffects = self.ActiveEffects[humanoid]
+	if not activeEffects then
+		activeEffects = {}
+		self.ActiveEffects[humanoid] = activeEffects
+	end
+
+	local existingEffect = activeEffects[effectName]
+	if existingEffect then
+		if definition.StackBehavior == "ignore" then
+			return true
+		end
+
+		if definition.StackBehavior == "stack" and existingEffect.Stacks < (definition.MaxStacks :: number) then
+			existingEffect.Stacks += 1
+		end
+
+		existingEffect.ExpireTime = now + (definition.Duration :: number)
+		return true
+	end
+
+	local effect: EffectInstance = {
+		Name = effectName,
+		Definition = definition,
+		StartTime = now,
+		Stacks = 1,
+		ExpireTime = now + (definition.Duration :: number),
+		NextTickTime = now + (definition.Interval :: number),
+	}
+
+	activeEffects[effectName] = effect
+	if definition.OnApply then
+		definition.OnApply(self:_createContext(humanoid, effect))
+	end
+
+	return true
 end
+
+return table.freeze(StatusEffect)
