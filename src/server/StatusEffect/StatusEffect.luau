@@ -5,13 +5,22 @@ local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
 StatusEffect.CurrentObject = nil
-StatusEffect.PresistentEffectAttribute = "PresistentEffect" -- For presistent like client replication of effects (Recommended for .Rate and .Enabled = true)
-StatusEffect.BurstEffectAttribute = "BurstEffect" -- For burst like client replication of effects (Recommended for :Emit() and .Enabled = false)
 StatusEffect.Debugging = RunService:IsStudio()
 
--- Creates an object of StatusEffect and returns the object.
--- This should only be ran once and referenced later in 'StatusEffect.CurrentObject'
-function StatusEffect.New()
+--[[
+	Create an object of StatusEffect type to start managing the lifecycle of status effects.
+	The reference of the object can be later referenced in StatusEffect.CurrentObject.
+
+	Return:
+		object - The newly created object that represents the StatusEffect.
+
+	Arguements:
+		remoteEvent - The RemoteEvent instance that will be used to send replication requests to the client. 
+			Be sure to have a handler on the client to catch these events!
+		maxNumberPerHumanoid - The max number of events statuses a humanoid to have.
+			By default, this value is capped at 3.
+]]
+function StatusEffect.New(remoteEvent: RemoteEvent, maxNumberPerHumanoid: number?)
 	if StatusEffect.CurrentObject then
 		warn(
 			"Attempted to create a StatusEffect object when one already exists. Reference 'StatusEffect.CurrentObject' instead to get the object."
@@ -21,6 +30,8 @@ function StatusEffect.New()
 
 	local self = setmetatable({}, StatusEffect)
 
+	self.MaxNumberPerHumanoid = maxNumberPerHumanoid or 3
+	self.RemoteEvent = remoteEvent -- This will be used to send replication events to the client
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
 	self.JanitorConnections = {} :: { RBXScriptConnection }
