@@ -361,4 +361,36 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	return true
 end
 
+--[[
+	Remove an effect manually from a humanoid.
+	You can remove either one or all effects from the humanoid.
+
+	Return:
+		boolean - The success of the removal. True if successful, false otherwise.
+
+	Arguements:
+		humanoid - The humanoid instance to apply the effect onto.
+		action - Either 'one' (to target one effect) or 'all' (to target all effects)
+		effectName - The name of the effect to target for removal.
+			You do not need to set this parameter if the action is 'all'.
+]]
+function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", effectName: string?): boolean
+	if action == "one" and not effectName then
+		outputMessage(
+			"warn",
+			`Attempted to clear an effect from ({humanoid:GetFullName()}) despite no effectName being given.`
+		)
+		return false
+	end
+
+	local existingEffects = self.ActiveEffects[humanoid]
+	if action == "one" and existingEffects[effectName] then
+		existingEffects[effectName] = nil
+	end
+
+	-- TODO:
+
+	return true
+end
+
 return StatusEffect
