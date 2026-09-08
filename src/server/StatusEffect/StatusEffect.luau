@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
@@ -22,6 +23,7 @@ function StatusEffect.New()
 
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
+	self.JanitorConnections = {} :: { RBXScriptConnection }
 
 	-- Connection that runs the lifecycle of currently running effects
 	RunService.Heartbeat:Connect(function()
@@ -179,6 +181,71 @@ local function validateDefinition(effectName: string, definition: EffectDefiniti
 	end
 
 	return normalizedDefinition
+end
+
+--[[
+	Create a janitor which will handle the creation and clean up of players who are joining, leaving the game, and already in the game.
+	This will prevent any memory leaks that might come from active effects.
+
+	This should only be ran once to initialize the janitor!
+
+	Return:
+		boolean - The success of creation of the janitor. True if successful, false otherwise.
+]]
+function StatusEffect:_createJanitor(): boolean
+	if #self.JanitorConnections ~= 0 then
+		outputMessage("warn", "Attempted to create new janitor connections when they already exist.")
+		return false
+	end
+
+	local function getHumanoid(player: Player): Humanoid
+		local character = player.Character
+		local humanoid = character and character:WaitForChild("Humanoid")
+		return humanoid:IsA("Humanoid") and humanoid
+	end
+
+	local function createDiedEvent(humanoid: Humanoid)
+		if not humanoid then
+			return
+		end
+
+		humanoid.Died:Connect(function()
+			if self.ActiveEffects[humanoid] then
+				self.ActiveEffects[humanoid] = nil
+			end
+		end)
+	end
+
+	local function resetAttributes(player: Player)
+		player:SetAttribute(self.PresistentEffectAttribute, "")
+		player:SetAttribute(self.BurstEffectAttribute, "")
+	end
+
+	-- Connection to catch incoming players
+	self.JanitorConnections[#self.JanitorConnections + 1] = Players.PlayerAdded:Connect(function(player)
+		resetAttributes(player)
+		createDiedEvent(getHumanoid(player))
+
+		player.CharacterAdded:Connect(function(character)
+			resetAttributes(player)
+			createDiedEvent(getHumanoid(player))
+		end)
+	end)
+
+	-- Connection to catch outgoing players
+	self.JanitorConnections[#self.JanitorConnections + 1] = Players.PlayerRemoving:Connect(function(player)
+		local humanoid = getHumanoid(player)
+		if humanoid and self.ActiveEffects[humanoid] then
+			self.ActiveEffects[humanoid] = nil
+		end
+	end)
+
+	-- Catch any players that are already in the game
+	for _, player in Players:GetPlayers() do
+		createDiedEvent(getHumanoid(player))
+	end
+
+	return true
 end
 
 --[[
