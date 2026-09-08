@@ -309,6 +309,40 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 end
 
 --[[
+	Unregister an effect status type that will no longer be used.
+
+	Return:
+		boolean - The success of the unregisteration. True if successful, false otherwise.
+
+	Arguements:
+		effectName - The name of the effect that will be unregistered.
+		terminate - Whether all running instances of this effect should also, to, be removed from humanoids.
+			If terminate is false, existing instances will naturally disappear through their lifecycles.
+]]
+function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
+	if not self.RegisteredEffects[effectName] then
+		outputMessage("warn", `Attempted to unregister "{effectName}" when it wasn't registered.`)
+		return false
+	end
+
+	self.RegisteredEffects[effectName] = nil
+
+	if terminate then
+		for humanoid, effects in self.ActiveEffects do
+			if not effects[effectName] then
+				continue
+			end
+
+			task.spawn(function()
+				self:_removeFromActive(humanoid, effectName)
+			end)
+		end
+	end
+
+	return true
+end
+
+--[[
 	Create the context for an effect.
 ]]
 function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance): EffectContext
