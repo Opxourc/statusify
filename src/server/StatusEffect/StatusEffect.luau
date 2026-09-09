@@ -1,21 +1,46 @@
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+const RunService = game:GetService("RunService")
+const Players = game:GetService("Players")
 
 const CurrentDirectory = script.Parent
 const Types = require(CurrentDirectory.Types)
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
 export type ConstructorDependencies = Types.ConstructorDependencies
+export type StatusEffectObject = Types.StatusEffectObject
 export type EffectDefinition = Types.EffectDefinition
 export type EventMessages = Types.EventMessages
 export type EffectInstance = Types.EffectInstance
 export type EffectContext = Types.EffectContext
 
+local CurrentObject: StatusEffectObject? = nil -- Represents the single object the StatusEffect
+const Debugging = RunService:IsStudio()
+
+--[[
+	Output a message to the console about an event.
+	Messages are only printed at studio time and won't be printed during production.
+]]
+local function outputMessage(status: "warn" | "log", message: string)
+	if not Debugging then
+		return
+	end
+
+	if status == "warn" then
+		warn(message)
+	elseif status == "log" then
+		print(message)
+	end
+end
+
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
-StatusEffect.CurrentObject = nil
-StatusEffect.Debugging = RunService:IsStudio()
+--[[
+	Returns the currently existing StatusEffect object.
+	If the constructor was not used or the :Destroy method was used while one existed, the returned object will be nil.
+]]
+function StatusEffect.GetExistingObject()
+	return CurrentObject
+end
 
 --[[
 	Create an object of StatusEffect type to start managing the lifecycle of status effects.
@@ -31,12 +56,13 @@ StatusEffect.Debugging = RunService:IsStudio()
 		maxNumberPerHumanoid - The max number of events statuses a humanoid to have.
 			By default, this value is capped at 3.
 ]]
-function StatusEffect.New(dependencies: ConstructorDependencies)
-	if StatusEffect.CurrentObject then
-		warn(
-			"Attempted to create a StatusEffect object when one already exists. Reference 'StatusEffect.CurrentObject' instead to get the object."
+function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectObject?
+	if CurrentObject then
+		outputMessage(
+			"warn",
+			"Attempted to create a StatusEffect object when one already exists. Use .GetExistingObject() to get this object instead!"
 		)
-		return
+		return nil
 	end
 
 	local self = setmetatable({}, StatusEffect)
@@ -79,17 +105,6 @@ table.freeze(EFFECT_DEFINITION_DEFAULTS)
 --[[
 	Outputs a message while in Debugging mode.
 ]]
-local function outputMessage(status: "warn" | "log", message: string)
-	if not StatusEffect.Debugging then
-		return
-	end
-
-	if status == "warn" then
-		warn(message)
-	elseif status == "log" then
-		print(message)
-	end
-end
 
 --[[
 	Checks if a incoming definition is correct.
