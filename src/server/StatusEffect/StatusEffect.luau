@@ -67,15 +67,25 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectOb
 
 	local self = setmetatable({}, StatusEffect)
 
+	-- Connections to handle the active states of effects when a player joins/dies/leaves
+	self.JanitorConnections = self:_createJanitor()
+	if self.JanitorConnections == nil or #self.JanitorConnections == 0 then
+		outputMessage("warn", "Unable to create StatusEffect object due to janitor creation failure.")
+		return nil
+	end
+
+	-- Connection that runs the lifecycle of currently running effects
+	self.RuntimeConnection = self:_createRuntime()
+	if self.RuntimeConnection == nil or #self.RuntimeConnection == 0 then
+		outputMessage("warn", "Unable to create StatusEffect object due to runtime creation failure.")
+		return nil
+	end
+
 	self.EventMessages = dependencies.EventMessages
 	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or 3
 	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to the client
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
-	self.JanitorConnections = {} :: { RBXScriptConnection }
-	self.RuntimeConnection = self:_createRuntime() -- Connection that runs the lifecycle of currently running effects
-
-	self:_createJanitor()
 
 	outputMessage("log", "StatusEffect object created.")
 	CurrentObject = self
@@ -218,58 +228,55 @@ end
 	Create a janitor which will handle the creation and clean up of players who are joining, leaving the game, and already in the game.
 	This will prevent any memory leaks that might come from active effects.
 
-	This should only be ran once to initialize the janitor!
+	This should only be ran once to initialize the janitor of the object.
 
 	Return:
-		boolean - The success of creation of the janitor. True if successful, false otherwise.
+		{RBXScriptConnection} - An array of connections related to the janitor. Empty if failed to create any such connections.
 ]]
-function StatusEffect:_createJanitor(): boolean
-	if #self.JanitorConnections ~= 0 then
+function StatusEffect:_createJanitor(): { RBXScriptConnection }
+	if #self.JanitorConnections ~= 0 or self.JanitorConnections ~= nil then
 		outputMessage("warn", "Attempted to create new janitor connections when they already exist.")
-		return false
+		return {}
 	end
 
-	local function getHumanoid(player: Player): Humanoid
+	local function getHumanoid(player: Player): Humanoid?
 		local character = player.Character
-		local humanoid = character and character:WaitForChild("Humanoid")
+		local humanoid = character and character:WaitForChild("Humanoid", 3)
 		return humanoid:IsA("Humanoid") and humanoid
 	end
 
-	local function createDiedEvent(humanoid: Humanoid)
+	local function createDiedEvent(humanoid: Humanoid?)
 		if not humanoid then
 			return
 		end
 
 		humanoid.Died:Connect(function()
-			if self.ActiveEffects[humanoid] then
-				self.ActiveEffects[humanoid] = nil
-			end
+			self:ClearEffect(humanoid, "all")
 		end)
 	end
-
-	-- Connection to catch incoming players
-	self.JanitorConnections[#self.JanitorConnections + 1] = Players.PlayerAdded:Connect(function(player)
-		createDiedEvent(getHumanoid(player))
-
-		player.CharacterAdded:Connect(function(character)
-			createDiedEvent(getHumanoid(player))
-		end)
-	end)
-
-	-- Connection to catch outgoing players
-	self.JanitorConnections[#self.JanitorConnections + 1] = Players.PlayerRemoving:Connect(function(player)
-		local humanoid = getHumanoid(player)
-		if humanoid and self.ActiveEffects[humanoid] then
-			self.ActiveEffects[humanoid] = nil
-		end
-	end)
 
 	-- Catch any players that are already in the game
 	for _, player in Players:GetPlayers() do
 		createDiedEvent(getHumanoid(player))
 	end
 
-	return true
+	return {
+		-- Connection to catch incoming players
+		Players.PlayerAdded:Connect(function(player)
+			createDiedEvent(getHumanoid(player))
+			player.CharacterAdded:Connect(function()
+				createDiedEvent(getHumanoid(player))
+			end)
+		end),
+
+		-- Connection to catch outgoing players
+		Players.PlayerRemoving:Connect(function(player)
+			local humanoid = getHumanoid(player)
+			if humanoid then
+				self:ClearEffect(humanoid, "all")
+			end
+		end),
+	}
 end
 
 function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
