@@ -1,23 +1,21 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+const CurrentDirectory = script.Parent
+const Types = require(CurrentDirectory.Types)
+
+-- Convenience exporting so you don't have to import 'Types.luau' constantly
+export type ConstructorDependencies = Types.ConstructorDependencies
+export type EffectDefinition = Types.EffectDefinition
+export type EventMessages = Types.EventMessages
+export type EffectInstance = Types.EffectInstance
+export type EffectContext = Types.EffectContext
+
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
 StatusEffect.CurrentObject = nil
 StatusEffect.Debugging = RunService:IsStudio()
-
-export type EventMessages = {
-	Presist: string,
-	Remove: string,
-	Burst: string,
-}
-
-export type ConstructorDependencies = {
-	RemoteEvent: RemoteEvent,
-	EventMessages: EventMessages,
-	MaxNumberPerHumanoid: number?,
-}
 
 --[[
 	Create an object of StatusEffect type to start managing the lifecycle of status effects.
@@ -69,46 +67,6 @@ function StatusEffect:Destroy()
 
 	StatusEffect.CurrentObject = nil
 end
-
--- The information that effect callbacks need, in order to know what to do.
-export type EffectContext = {
-	Target: Humanoid,
-	Effect: EffectInstance,
-
-	Stacks: number,
-
-	Damage: (self: EffectContext, amount: number) -> (),
-	Remove: (self: EffectContext) -> (),
-	Refresh: (self: EffectContext) -> (),
-	AddStacks: (self: EffectContext, amount: number) -> (),
-}
-
--- The contract for a live effect that is running
-export type EffectInstance = {
-	Definition: EffectDefinition,
-	Name: string,
-	Stacks: number,
-	StartTime: number,
-	ExpireTime: number,
-	NextTickTime: number,
-}
-
--- Describes the template for an effect
-export type EffectDefinition = {
-	Duration: number?, -- How long 'one' stack should last naturally without any interuptions
-	Interval: number?, -- How fast ticks should be applied during the duration
-
-	MaxStacks: number?,
-	StackBehavior: "refresh" | "stack" | "ignore"?,
-	-- refresh - Reset duration
-	-- stack - Increase the number of stacks by 1 unless capped
-	-- ignore - Do nothing
-
-	-- Functions that step through the effect's lifecycle
-	OnApply: ((context: EffectContext) -> ())?, -- The moment an effect goes live
-	OnTick: ((context: EffectContext) -> ())?, -- When a interval strikes
-	OnRemove: ((context: EffectContext) -> ())?, -- The moment an effect is cleared
-}
 
 const EFFECT_DEFINITION_DEFAULTS = {
 	Duration = 5,
