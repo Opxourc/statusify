@@ -73,13 +73,12 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectOb
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
 	self.JanitorConnections = {} :: { RBXScriptConnection }
-
-	-- Connection that runs the lifecycle of currently running effects
-	self.RuntimeConnection = self:_createRuntime()
+	self.RuntimeConnection = self:_createRuntime() -- Connection that runs the lifecycle of currently running effects
 
 	self:_createJanitor()
-	StatusEffect.CurrentObject = self
-	table.freeze(StatusEffect)
+
+	outputMessage("log", "StatusEffect object created.")
+	CurrentObject = self
 	return self
 end
 
@@ -88,10 +87,21 @@ end
 	You'll have to create a new StatusEffect object if you want to use the StatusEffect.CurrentObject reference again.
 ]]
 function StatusEffect:Destroy()
-	if table.isfrozen(StatusEffect) then
+	CurrentObject = nil
+
+	for _, connection in self.JanitorConnections do
+		connection:Disconnect()
 	end
 
-	StatusEffect.CurrentObject = nil
+	if self.RuntimeConnection then
+		self.RuntimeConnection:Disconnect()
+	end
+
+	for humanoid, effectName in self.ActiveEffects do
+		self:_removeFromActive(humanoid, effectName)
+	end
+
+	outputMessage("log", "StatusEffect object destroyed.")
 end
 
 const EFFECT_DEFINITION_DEFAULTS = {
@@ -165,7 +175,7 @@ local function validateDefinition(effectName: string, definition: EffectDefiniti
 	for _, callbackName in { "OnApply", "OnTick", "OnRemove" } do
 		local callback = normalizedDefinition[callbackName]
 		if callback ~= nil and type(callback) ~= "function" then
-			if StatusEffect.Debugging then
+			if Debugging then
 				warn(`Effect "{effectName}" had an invalid {callbackName}; removing it.`)
 			end
 			normalizedDefinition[callbackName] = nil
@@ -462,4 +472,4 @@ function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", eff
 	return true
 end
 
-return StatusEffect
+return table.freeze(StatusEffect)
