@@ -40,7 +40,7 @@ export type EffectInstance = {
 	NextTickTime: number,
 }
 
--- The information that effect callbacks need, in order to know what to do.
+-- The information that effect callbacks need, in order to know what to do
 export type EffectContext = {
 	Target: Humanoid,
 	Effect: EffectInstance,
@@ -50,6 +50,31 @@ export type EffectContext = {
 	Remove: (self: EffectContext) -> (),
 	Refresh: (self: EffectContext) -> (),
 	AddStacks: (self: EffectContext, amount: number) -> (),
+}
+
+-- The actual object type for a StatusEffectObject
+export type StatusEffectObject = {
+	-- Properties
+	EventMessages: EventMessages,
+	MaxNumberPerHumanoid: number,
+	RemoteEvent: RemoteEvent,
+	RegisteredEffects: { [string]: EffectDefinition },
+	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
+	JanitorConnections: { RBXScriptConnection },
+	RuntimeConnections: RBXScriptConnection,
+
+	-- Private methods
+	_removeFromActive: (self: StatusEffectObject, humanoid: Humanoid, effectName: string) -> (),
+	_createContext: (self: StatusEffectObject, humanoid: Humanoid, effect: EffectInstance) -> EffectContext,
+	_createRuntime: (self: StatusEffectObject) -> RBXScriptConnection?,
+	_createJanitor: (self: StatusEffectObject) -> boolean,
+
+	-- Public methods
+	Destroy: (self: StatusEffectObject) -> (),
+	RegisterEffect: (self: StatusEffectObject, effectName: string, definition: EffectDefinition) -> boolean,
+	UnregisterEffect: (self: StatusEffectObject, effectName: string, terminate: boolean) -> boolean,
+	ClearEffect: (self: StatusEffectObject, Humanoid: Humanoid, action: "one" | "all") -> boolean,
+	ApplyEffect: (self: StatusEffectObject, humanoid: Humanoid, effectName: string) -> boolean,
 }
 
 local Types = {}
