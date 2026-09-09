@@ -51,32 +51,23 @@ function StatusEffect.New(dependencies: ConstructorDependencies)
 	self.JanitorConnections = {} :: { RBXScriptConnection }
 
 	-- Connection that runs the lifecycle of currently running effects
-	RunService.Heartbeat:Connect(function()
-		local now = workspace:GetServerTimeNow()
-
-		for humanoid, activeEffects in self.ActiveEffects do
-			for effectName, effect in activeEffects do
-				if now >= effect.ExpireTime then
-					self:_removeFromActive(humanoid, effectName)
-
-					if effect.Definition.OnRemove then
-						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
-					end
-				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
-					effect.NextTickTime = now + effect.Definition.Interval
-
-					if effect.Definition.OnTick then
-						effect.Definition.OnTick(self:_createContext(humanoid, effect))
-					end
-				end
-			end
-		end
-	end)
+	self.RuntimeConnection = self:_createRuntime()
 
 	self:_createJanitor()
 	StatusEffect.CurrentObject = self
 	table.freeze(StatusEffect)
 	return self
+end
+
+--[[
+	Shut down and destruct the entire StatusEffect object, releasing everything it owns.
+	You'll have to create a new StatusEffect object if you want to use the StatusEffect.CurrentObject reference again.
+]]
+function StatusEffect:Destroy()
+	if table.isfrozen(StatusEffect) then
+	end
+
+	StatusEffect.CurrentObject = nil
 end
 
 -- The information that effect callbacks need, in order to know what to do.
@@ -209,6 +200,35 @@ local function validateDefinition(effectName: string, definition: EffectDefiniti
 	end
 
 	return normalizedDefinition
+end
+
+function StatusEffect:_createRuntime(): RBXScriptConnection?
+	if self.RuntimeConnection then
+		outputMessage("warn", "Attempted to create a new runtime connection while one already exists.")
+		return nil
+	end
+
+	return RunService.Heartbeat:Connect(function()
+		local now = workspace:GetServerTimeNow()
+
+		for humanoid, activeEffects in self.ActiveEffects do
+			for effectName, effect in activeEffects do
+				if now >= effect.ExpireTime then
+					self:_removeFromActive(humanoid, effectName)
+
+					if effect.Definition.OnRemove then
+						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
+					end
+				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
+					effect.NextTickTime = now + effect.Definition.Interval
+
+					if effect.Definition.OnTick then
+						effect.Definition.OnTick(self:_createContext(humanoid, effect))
+					end
+				end
+			end
+		end
+	end)
 end
 
 --[[
