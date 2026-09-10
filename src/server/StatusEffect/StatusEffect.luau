@@ -137,6 +137,8 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 					if effect.Definition.OnTick then
 						effect.Definition.OnTick(self:_createContext(humanoid, effect))
 					end
+
+					self:_sendReplication(humanoid, self.EventMessages.Tick, effectName)
 				end
 			end
 		end
@@ -224,10 +226,50 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 
 	if effects[effectName] then
 		effects[effectName] = nil
-
-		local players = Players:GetPlayerFromCharacter(humanoid.Parent)
-		self.RemoteEvent:FireAllClients(players, self.EventMessages.Remove, effectName)
+		self:_sendReplication(humanoid, self.EventMessages.Remove, effectName)
 	end
+end
+
+function StatusEffect:_sendReplication(humanoid: Humanoid, message: EventMessages, effectName: string): boolean
+	local player = Players:GetPlayerFromCharacter(humanoid.Parent)
+	if not player then
+		outputMessage(
+			"warn",
+			`Attempted to send a replication event when Player instance was found via humanoid: ({humanoid:GetFullName()})`
+		)
+		return false
+	end
+
+	local effects = self.ActiveEffects[humanoid]
+	if not effects then
+		outputMessage(
+			"warn",
+			`Attempted to send a replication event when no events exist under the provided humanoid: ({humanoid:GetFullName()})`
+		)
+		return false
+	end
+
+	local effect = effects[effectName]
+	if not effect then
+		outputMessage(
+			"warn",
+			`Attempted to send a replication event for "{effectName}" effect when it doesn't exist under the provided humanoid: ({humanoid:GetFullName()})`
+		)
+		return false
+	end
+
+	-- Only give enough information to allow the client to build whatever representation they want
+	self.RemoteEvent:FireAllClients({
+		EffectName = effectName,
+		Message = self.RemoteEvent[message],
+		Target = player,
+		Stacks = effect.Stacks,
+		StartTime = effect.StartTime,
+		ExpireTime = effect.ExpireTime,
+	})
+
+	outputMessage("warn", `Sent replication event for {effectName} for humanoid: ({humanoid:GetFullName()})`)
+	return true
 end
 
 --[[
@@ -344,9 +386,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		definition.OnApply(self:_createContext(humanoid, effect))
 	end
 
-	local player = Players:GetPlayerFromCharacter(humanoid.Parent)
-	self.RemoteEvent:FireAllClients(player, self.EventMessages.Presist, effectName)
-
+	self:_sendReplication(humanoid, self.EventMessages.Apply, effectName)
 	return true
 end
 
