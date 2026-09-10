@@ -122,79 +122,6 @@ const EFFECT_DEFINITION_DEFAULTS = {
 }
 table.freeze(EFFECT_DEFINITION_DEFAULTS)
 
---[[
-	Outputs a message while in Debugging mode.
-]]
-
---[[
-	Checks if a incoming definition is correct.
-	If there's any issues, those issues are gracefully handled with default values.
-]]
-local function validateDefinition(effectName: string, definition: EffectDefinition): EffectDefinition
-	local normalizedDefinition = definition
-	if type(normalizedDefinition) ~= "table" then
-		normalizedDefinition = {} :: EffectDefinition
-	end
-
-	local function useDefault(propertyName: string)
-		local defaultValue = EFFECT_DEFINITION_DEFAULTS[propertyName]
-		normalizedDefinition[propertyName] = defaultValue
-
-		outputMessage(
-			"warn",
-			`Effect "{effectName}" had an invalid {propertyName}; using the default value ({defaultValue}).`
-		)
-	end
-
-	if type(normalizedDefinition.Duration) ~= "number" or normalizedDefinition.Duration <= 0 then
-		useDefault("Duration")
-	elseif
-		normalizedDefinition.Duration ~= normalizedDefinition.Duration or normalizedDefinition.Duration == math.huge
-	then
-		useDefault("Duration")
-	end
-
-	if type(normalizedDefinition.Interval) ~= "number" or normalizedDefinition.Interval < 0 then
-		useDefault("Interval")
-	elseif
-		normalizedDefinition.Interval ~= normalizedDefinition.Interval or normalizedDefinition.Interval == math.huge
-	then
-		useDefault("Interval")
-	end
-
-	if type(normalizedDefinition.MaxStacks) ~= "number" or normalizedDefinition.MaxStacks < 1 then
-		useDefault("MaxStacks")
-	elseif
-		normalizedDefinition.MaxStacks ~= math.huge
-		and (
-			normalizedDefinition.MaxStacks ~= normalizedDefinition.MaxStacks
-			or normalizedDefinition.MaxStacks % 1 ~= 0
-		)
-	then
-		useDefault("MaxStacks")
-	end
-
-	if
-		normalizedDefinition.StackBehavior ~= "refresh"
-		and normalizedDefinition.StackBehavior ~= "stack"
-		and normalizedDefinition.StackBehavior ~= "ignore"
-	then
-		useDefault("StackBehavior")
-	end
-
-	for _, callbackName in { "OnApply", "OnTick", "OnRemove" } do
-		local callback = normalizedDefinition[callbackName]
-		if callback ~= nil and type(callback) ~= "function" then
-			if Debugging then
-				warn(`Effect "{effectName}" had an invalid {callbackName}; removing it.`)
-			end
-			normalizedDefinition[callbackName] = nil
-		end
-	end
-
-	return normalizedDefinition
-end
-
 function StatusEffect:_createRuntime(): RBXScriptConnection?
 	if self.RuntimeConnection then
 		outputMessage("warn", "Attempted to create a new runtime connection while one already exists.")
@@ -294,15 +221,14 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 end
 
 --[[
-	Register an effect status to be used for the game.
+	Register an effect status to be avaliable for use.
 
 	Return:
 		boolean - The success of the registerion. True if successful, false otherwise.
 
 	Arguements:
 		effectName - The name you want to give for this effect and reference to.
-		defintiion - The essential data and information to know exactly what this effect should do.
-			Please read the EffectDefintiion type to know exactly what this parameter expects!
+		defintiion - The essential data and information to know exactly what this effect should do when it's actively running.
 
 	NOTE: Properties will be defaulted to a value if they're not defined.
 ]]
@@ -312,9 +238,12 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 		return false
 	end
 
-	definition = validateDefinition(effectName, definition)
-	self.RegisteredEffects[effectName] = definition
+	definition.Duration = definition.Duration or Types.ED_Defaults.Duration
+	definition.Interval = definition.Interval or Types.ED_Defaults.Interval
+	definition.MaxStacks = definition.MaxStacks or Types.ED_Defaults.MaxStacks
+	definition.StackBehavior = definition.StackBehavior or Types.ED_Defaults.StackBehavior
 
+	self.RegisteredEffects[effectName] = definition
 	return true
 end
 
