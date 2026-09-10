@@ -114,14 +114,6 @@ function StatusEffect:Destroy()
 	outputMessage("log", "StatusEffect object destroyed.")
 end
 
-const EFFECT_DEFINITION_DEFAULTS = {
-	Duration = 5,
-	Interval = 1,
-	MaxStacks = math.huge,
-	StackBehavior = "refresh",
-}
-table.freeze(EFFECT_DEFINITION_DEFAULTS)
-
 function StatusEffect:_createRuntime(): RBXScriptConnection?
 	if self.RuntimeConnection then
 		outputMessage("warn", "Attempted to create a new runtime connection while one already exists.")
@@ -149,6 +141,24 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 			end
 		end
 	end)
+end
+
+--[[
+	Create the context for an effect so it can be used to provide helpful information on it's current state.
+
+	Return:
+		EffectContext - The newly created context.
+
+	Arguements:
+		humanoid - The humanoid that is being effected by this status effect.
+		effect - The currently running instance of the effect
+]]
+function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance): EffectContext
+	return {
+		Target = humanoid,
+		Effect = effect,
+		Stacks = effect.Stacks,
+	}
 end
 
 --[[
@@ -279,35 +289,6 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 	end
 
 	return true
-end
-
---[[
-	Create the context for an effect.
-]]
-function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance): EffectContext
-	return {
-		Target = humanoid,
-		Effect = effect,
-		Stacks = effect.Stacks,
-		Damage = function(_, amount: number)
-			humanoid:TakeDamage(amount)
-		end,
-		Remove = function()
-			local activeEffects = self.ActiveEffects[humanoid]
-			if activeEffects and activeEffects[effect.Name] == effect then
-				activeEffects[effect.Name] = nil
-				if effect.Definition.OnRemove then
-					effect.Definition.OnRemove(self:_createContext(humanoid, effect))
-				end
-			end
-		end,
-		Refresh = function()
-			effect.ExpireTime = workspace:GetServerTimeNow() + (effect.Definition.Duration :: number)
-		end,
-		AddStacks = function(_, amount: number)
-			effect.Stacks = math.min(effect.Stacks + amount, effect.Definition.MaxStacks :: number)
-		end,
-	}
 end
 
 --[[
