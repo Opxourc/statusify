@@ -40,16 +40,11 @@ export type EffectInstance = {
 	NextTickTime: number,
 }
 
--- The information that effect callbacks need, in order to know what to do
+-- The context of the running effect at a given state.
 export type EffectContext = {
-	Target: Humanoid,
 	Effect: EffectInstance,
+	Target: Humanoid,
 	Stacks: number,
-
-	Damage: (self: EffectContext, amount: number) -> (),
-	Remove: (self: EffectContext) -> (),
-	Refresh: (self: EffectContext) -> (),
-	AddStacks: (self: EffectContext, amount: number) -> (),
 }
 
 -- The actual object type for a StatusEffectObject
