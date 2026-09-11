@@ -3,6 +3,7 @@ const Players = game:GetService("Players")
 
 const CurrentDirectory = script.Parent
 const Types = require(CurrentDirectory.Types)
+const Defaults = require(CurrentDirectory.Defaults)
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
 export type ConstructorDependencies = Types.ConstructorDependencies
@@ -277,10 +278,10 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 		return false
 	end
 
-	definition.Duration = definition.Duration or Types.ED_Defaults.Duration
-	definition.Interval = definition.Interval or Types.ED_Defaults.Interval
-	definition.MaxStacks = definition.MaxStacks or Types.ED_Defaults.MaxStacks
-	definition.StackBehavior = definition.StackBehavior or Types.ED_Defaults.StackBehavior
+	definition.Duration = definition.Duration or Defaults.ED_Defaults.Duration
+	definition.Interval = definition.Interval or Defaults.ED_Defaults.Interval
+	definition.MaxStacks = definition.MaxStacks or Defaults.ED_Defaults.MaxStacks
+	definition.StackBehavior = definition.StackBehavior or Defaults.ED_Defaults.StackBehavior
 
 	self.RegisteredEffects[effectName] = definition
 	return true

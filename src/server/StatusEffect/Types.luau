@@ -72,18 +72,4 @@ export type StatusEffectObject = {
 	ApplyEffect: (self: StatusEffectObject, humanoid: Humanoid, effectName: string) -> boolean,
 }
 
-local Types = {}
-Types.CD_DefaultMaxPerHumanoid = 3
-Types.ED_StackBehaviors = table.freeze({
-	Refresh = "refresh",
-	Ignore = "ignore",
-	Stack = "stack",
-})
-Types.ED_Defaults = table.freeze({
-	Duration = 5,
-	Interval = 1,
-	MaxStacks = math.huge,
-	StackBehavior = Types.ED_StackBehaviors.Refresh,
-})
-
-return table.freeze(Types)
+return table.freeze({})
