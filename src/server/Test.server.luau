@@ -27,7 +27,7 @@ local Manager = StatusEffect.New({
 -- Add a burn effect
 const EffectName = "Burn"
 Manager:RegisterEffect(EffectName, {
-	Duration = 3,
+	Duration = 10,
 	Interval = 1,
 	MaxStacks = 3,
 	StackBehavior = Types.ED_StackBehaviors.Stack,
@@ -46,6 +46,7 @@ Manager:RegisterEffect(EffectName, {
 })
 
 -- Effect is now registered, let's use it on our character!
+task.wait(3) -- Player may or maynot be fully loaded in
 local FirstPlayer = Players:GetPlayers()[1]
 local Humanoid = FirstPlayer.Character and FirstPlayer.Character:WaitForChild("Humanoid")
 if Humanoid and Humanoid:IsA("Humanoid") then
@@ -56,11 +57,11 @@ end
 -- The client will also get events so it can start replicating the effects
 
 -- Let's stop the effect manually after a few seconds
-task.wait(3)
-Manager:ClearEffect(Humanoid, "one", EffectName)
-task.wait(5)
+--task.wait(3)
+--Manager:ClearEffect(Humanoid, "one", EffectName)
+--task.wait(5)
 
 -- If we ever need to get the reference of the current object, we can do that as long as it was constructed and wasn't destroyed
 -- Let's get a new reference but also destroy the object completely
-local NewManager = StatusEffect.GetExistingObject()
-NewManager:Destroy()
+--local NewManager = StatusEffect.GetExistingObject()
+--NewManager:Destroy()
