@@ -15,10 +15,6 @@ export type EffectContext = Types.EffectContext
 local CurrentObject: StatusEffectObject? = nil -- Represents the single object the StatusEffect
 const Debugging = RunService:IsStudio()
 
---[[
-	Output a message to the console about an event.
-	Messages are only printed at studio time and won't be printed during production.
-]]
 local function outputMessage(status: "warn" | "log", message: string)
 	if not Debugging then
 		return
@@ -36,25 +32,14 @@ StatusEffect.__index = StatusEffect
 
 --[[
 	Returns the currently existing StatusEffect object.
-	If the constructor was not used or the :Destroy method was used while one existed, the returned object will be nil.
 ]]
 function StatusEffect.GetExistingObject()
 	return CurrentObject
 end
 
 --[[
-	Create an object of StatusEffect type to start managing the lifecycle of status effects.
-	The reference of the object can be later referenced in StatusEffect.CurrentObject.
-
-	Return:
-		object - The newly created object that represents the StatusEffect.
-
-	Arguements:
-		remoteEvent - The RemoteEvent instance that will be used to send replication requests to the client. 
-			Be sure to have a handler on the client to catch these events!
-		eventNames - The names/messages that will be used for the RemoveEvent to send for precise replication.
-		maxNumberPerHumanoid - The max number of events statuses a humanoid to have.
-			By default, this value is capped at 3.
+	Constructs a new StatusEffect object.
+	Only one object can exist at a time and should be referenced by .GetExistingObject() instead.
 ]]
 function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectObject?
 	if CurrentObject then
@@ -69,14 +54,14 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectOb
 
 	-- Connections to handle the active states of effects when a player joins/dies/leaves
 	self.JanitorConnections = self:_createJanitor()
-	if self.JanitorConnections == nil or #self.JanitorConnections == 0 then
+	if #self.JanitorConnections == 0 then
 		outputMessage("warn", "Unable to create StatusEffect object due to janitor creation failure.")
 		return nil
 	end
 
 	-- Connection that runs the lifecycle of currently running effects
 	self.RuntimeConnection = self:_createRuntime()
-	if self.RuntimeConnection == nil or #self.RuntimeConnection == 0 then
+	if self.RuntimeConnection == nil then
 		outputMessage("warn", "Unable to create StatusEffect object due to runtime creation failure.")
 		return nil
 	end
@@ -93,8 +78,7 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectOb
 end
 
 --[[
-	Shut down and destruct the entire StatusEffect object, releasing everything it owns.
-	You'll have to create a new StatusEffect object if you want to use the StatusEffect.CurrentObject reference again.
+	Destructs the object, releasing everything it owns.
 ]]
 function StatusEffect:Destroy()
 	CurrentObject = nil
@@ -114,8 +98,12 @@ function StatusEffect:Destroy()
 	outputMessage("log", "StatusEffect object destroyed.")
 end
 
+--[[
+	Initializes the Runtime for status effects, running their lifecycle automatically.
+	Must only be called once.
+]]
 function StatusEffect:_createRuntime(): RBXScriptConnection?
-	if self.RuntimeConnection then
+	if self.RuntimeConnection ~= nil then
 		outputMessage("warn", "Attempted to create a new runtime connection while one already exists.")
 		return nil
 	end
@@ -127,17 +115,14 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 			for effectName, effect in activeEffects do
 				if now >= effect.ExpireTime then
 					self:_removeFromActive(humanoid, effectName)
-
 					if effect.Definition.OnRemove then
 						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
 					end
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
-
 					if effect.Definition.OnTick then
 						effect.Definition.OnTick(self:_createContext(humanoid, effect))
 					end
-
 					self:_sendReplication(humanoid, self.EventMessages.Tick, effectName)
 				end
 			end
@@ -146,14 +131,7 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 end
 
 --[[
-	Create the context for an effect so it can be used to provide helpful information on it's current state.
-
-	Return:
-		EffectContext - The newly created context.
-
-	Arguements:
-		humanoid - The humanoid that is being effected by this status effect.
-		effect - The currently running instance of the effect
+	Creates the context used to get the effect's current state.
 ]]
 function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance): EffectContext
 	return {
@@ -164,60 +142,71 @@ function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance)
 end
 
 --[[
-	Create a janitor which will handle the creation and clean up of players who are joining, leaving the game, and already in the game.
-	This will prevent any memory leaks that might come from active effects.
-
-	This should only be ran once to initialize the janitor of the object.
-
-	Return:
-		{RBXScriptConnection} - An array of connections related to the janitor. Empty if failed to create any such connections.
+	Initializes the Janitor and registers cleanup for existing, future, and existing players. 
+	Must only be called once.
 ]]
 function StatusEffect:_createJanitor(): { RBXScriptConnection }
-	if #self.JanitorConnections ~= 0 or self.JanitorConnections ~= nil then
+	if self.JanitorConnections ~= nil and #self.JanitorConnections ~= 0 then
 		outputMessage("warn", "Attempted to create new janitor connections when they already exist.")
 		return {}
 	end
 
-	local function getHumanoid(player: Player): Humanoid?
-		local character = player.Character
-		local humanoid = character and character:WaitForChild("Humanoid", 3)
-		return humanoid:IsA("Humanoid") and humanoid
+	local connections: { RBXScriptConnection } = {}
+
+	local function getHumanoid(character: Model?, waitForHumanoid: boolean): Humanoid?
+		if not character then
+			return nil
+		end
+
+		if waitForHumanoid then
+			return character:WaitForChild("Humanoid", 5) :: Humanoid?
+		end
+
+		return character:FindFirstChildOfClass("Humanoid")
 	end
 
-	local function createDiedEvent(humanoid: Humanoid?)
+	local function createDiedEvent(character: Model?)
+		local humanoid = getHumanoid(character, true)
 		if not humanoid then
 			return
 		end
 
-		humanoid.Died:Connect(function()
-			self:ClearEffect(humanoid, "all")
-		end)
+		table.insert(
+			connections,
+			humanoid.Died:Connect(function()
+				self:ClearEffect(humanoid, "all")
+			end)
+		)
+	end
+
+	local function watchPlayer(player: Player)
+		createDiedEvent(player.Character)
+		table.insert(connections, player.CharacterAdded:Connect(createDiedEvent))
 	end
 
 	-- Catch any players that are already in the game
 	for _, player in Players:GetPlayers() do
-		createDiedEvent(getHumanoid(player))
+		watchPlayer(player)
 	end
 
-	return {
-		-- Connection to catch incoming players
-		Players.PlayerAdded:Connect(function(player)
-			createDiedEvent(getHumanoid(player))
-			player.CharacterAdded:Connect(function()
-				createDiedEvent(getHumanoid(player))
-			end)
-		end),
-
-		-- Connection to catch outgoing players
+	-- Connection to catch incoming players and outgoing players
+	table.insert(connections, Players.PlayerAdded:Connect(watchPlayer))
+	table.insert(
+		connections,
 		Players.PlayerRemoving:Connect(function(player)
-			local humanoid = getHumanoid(player)
+			local humanoid = getHumanoid(player.Character, false)
 			if humanoid then
 				self:ClearEffect(humanoid, "all")
 			end
-		end),
-	}
+		end)
+	)
+
+	return connections
 end
 
+--[[
+	Remove an active effect from a humanoid.
+]]
 function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
@@ -225,11 +214,17 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 	end
 
 	if effects[effectName] then
-		effects[effectName] = nil
+		-- Call the replication event first before setting nil
+		-- This is because replication is goning to check the state of the effect for this humanoid again
 		self:_sendReplication(humanoid, self.EventMessages.Remove, effectName)
+		effects[effectName] = nil
+		outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
 	end
 end
 
+--[[
+	Sends a replication event to the client with information about the current state of an effect.
+]]
 function StatusEffect:_sendReplication(humanoid: Humanoid, message: EventMessages, effectName: string): boolean
 	local player = Players:GetPlayerFromCharacter(humanoid.Parent)
 	if not player then
@@ -261,32 +256,24 @@ function StatusEffect:_sendReplication(humanoid: Humanoid, message: EventMessage
 	-- Only give enough information to allow the client to build whatever representation they want
 	self.RemoteEvent:FireAllClients({
 		EffectName = effectName,
-		Message = self.RemoteEvent[message],
+		Message = message,
 		Target = player,
 		Stacks = effect.Stacks,
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
 	})
 
-	outputMessage("warn", `Sent replication event for {effectName} for humanoid: ({humanoid:GetFullName()})`)
+	outputMessage("log", `Sent replication event for {effectName} for humanoid: ({humanoid:GetFullName()})`)
 	return true
 end
 
 --[[
 	Register an effect status to be avaliable for use.
-
-	Return:
-		boolean - The success of the registerion. True if successful, false otherwise.
-
-	Arguements:
-		effectName - The name you want to give for this effect and reference to.
-		defintiion - The essential data and information to know exactly what this effect should do when it's actively running.
-
-	NOTE: Properties will be defaulted to a value if they're not defined.
+	Properties will be defaulted to a value if they're nil.
 ]]
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	if self.RegisteredEffects[effectName] then
-		warn(`Attempted to register "{effectName}" when it's already registered.`)
+		outputMessage("warn", `Attempted to register "{effectName}" when it's already registered.`)
 		return false
 	end
 
@@ -300,15 +287,8 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 end
 
 --[[
-	Unregister an effect status type that will no longer be used.
-
-	Return:
-		boolean - The success of the unregisteration. True if successful, false otherwise.
-
-	Arguements:
-		effectName - The name of the effect that will be unregistered.
-		terminate - Whether all running instances of this effect should also, to, be removed from humanoids.
-			If terminate is false, existing instances will naturally disappear through their lifecycles.
+	Unregister an effect status that will no longer be used.
+	Use 'terminate' to destroy all active instances of the effect instantly.
 ]]
 function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
 	if not self.RegisteredEffects[effectName] then
@@ -334,15 +314,8 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 end
 
 --[[
-	Apply an effect status onto a humanoid.
-
-	Return:
-		boolean - The success of the application. True if successful, false otherwise.
-
-	Arguements:
-		humanoid - The humanoid instance to apply the effect onto.
-		effectName - The effect that will be applied to the humanoid. 
-			This name should be registered first before using this method!
+	Apply and effect status onto a humanoid.
+	This effect status should be registered first before any application of it can be used!
 ]]
 function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	local definition = self.RegisteredEffects[effectName]
@@ -391,17 +364,9 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 end
 
 --[[
-	Remove an effect manually from a humanoid.
-	You can remove either one or all effects from the humanoid.
-
-	Return:
-		boolean - The success of the removal. True if successful, false otherwise.
-
-	Arguements:
-		humanoid - The humanoid instance to apply the effect onto.
-		action - Either 'one' (to target one effect) or 'all' (to target all effects)
-		effectName - The name of the effect to target for removal.
-			You do not need to set this parameter if the action is 'all'.
+	Remove an effect status from a humanoid.
+	Use 'action' to determine whether all or one effect should be removed.
+	If 'action' is set to "all", you don't have to provide the 'effectName' arguement.
 ]]
 function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", effectName: string?): boolean
 	if action == "one" then
