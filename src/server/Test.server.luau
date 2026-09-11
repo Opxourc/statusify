@@ -10,7 +10,6 @@ const StatusEffectEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild
 -- Create dependencies and create object
 const Framework = script.Parent.StatusEffect
 const StatusEffect = require(Framework.StatusEffect)
-const Types = require(Framework.Types)
 
 const EventMessages: StatusEffect.EventMessages = {
 	Apply = "apply",
@@ -30,7 +29,7 @@ Manager:RegisterEffect(EffectName, {
 	Duration = 10,
 	Interval = 1,
 	MaxStacks = 3,
-	StackBehavior = Types.ED_StackBehaviors.Stack,
+	StackBehavior = "refresh",
 
 	-- Use the context that's given to know more about the effect
 	OnApply = function(context)
