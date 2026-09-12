@@ -7,6 +7,6 @@ export type Replication = {
 	Stacks: number,
 }
 
-export type EventMessage = "apply" | "tick" | "remove"
+export type EventMessage = "apply" | "tick" | "remove" | "update"
 
 return table.freeze({})

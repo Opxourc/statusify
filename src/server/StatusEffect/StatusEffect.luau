@@ -29,10 +29,6 @@ local function outputMessage(status: "warn" | "log", message: string)
 	end
 end
 
-local function mutateStack(effect: EffectInstance, applyValue: number)
-	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
-end
-
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
@@ -135,8 +131,12 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 	end)
 end
 
-function StatusEffect:_mutateStack(effect: EffectInstance, applyValue: number)
+--[[
+	Mutate the stack count of a effect to go up or down.
+]]
+function StatusEffect:_mutateStack(humanoid: Humanoid, effect: EffectInstance, applyValue: number)
 	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
+	self:_sendReplication(humanoid, "update", effect.Name, effect.Definition)
 end
 
 --[[
@@ -183,7 +183,7 @@ function StatusEffect:_createJanitor(): { RBXScriptConnection }
 		table.insert(
 			connections,
 			humanoid.Died:Connect(function()
-				self:ClearEffect(humanoid, "all")
+				self:ClearEffect(humanoid, "removeAll")
 			end)
 		)
 	end
@@ -205,7 +205,7 @@ function StatusEffect:_createJanitor(): { RBXScriptConnection }
 		Players.PlayerRemoving:Connect(function(player)
 			local humanoid = getHumanoid(player.Character, false)
 			if humanoid then
-				self:ClearEffect(humanoid, "all")
+				self:ClearEffect(humanoid, "removeAll")
 			end
 		end)
 	)
@@ -380,8 +380,8 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 			return true
 		end
 
-		if definition.StackBehavior == "stack" and existingEffect.Stacks < (definition.MaxStacks :: number) then
-			existingEffect.Stacks += 1
+		if definition.StackBehavior == "stack" then
+			self:_mutateStack(humanoid, existingEffect, 1)
 		end
 
 		existingEffect.ExpireTime = now + (definition.Duration :: number)
@@ -421,7 +421,7 @@ function StatusEffect:ClearEffect(
 	action: "remove" | "removeAll" | "decrement",
 	effectName: string?
 ): boolean
-	if action == "remove" or action == "decrement" and not effectName then
+	if (action == "remove" or action == "decrement") and not effectName then
 		outputMessage("warn", `Attempted to clear a effect when no effect name was specified.`)
 		return false
 	end
@@ -445,7 +445,7 @@ function StatusEffect:ClearEffect(
 		end
 
 		local effect = self.ActiveEffects[humanoid][effectName]
-		mutateStack(effect, -1)
+		self:_mutateStack(humanoid, effect, -1)
 		if effect.Stacks == 0 then
 			self:_removeFromActive(humanoid, effectName)
 		end
