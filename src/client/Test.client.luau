@@ -8,42 +8,45 @@ if not game:GetService("RunService"):IsStudio() then
 	script:Destroy()
 end
 
--- We'll use the Burn effect like what the server created
 const ReplicatedStorage = game:GetService("ReplicatedStorage")
-const StatusEffectEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("StatusEffect") :: RemoteEvent
-const BurnAsset = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Burn") :: BasePart
-if not (StatusEffectEvent and BurnAsset) then
+
+-- We'll use the Burn effect example
+const StatusEffectEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("StatusEffect")
+const BurnAsset = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Burn")
+if not (StatusEffectEvent and StatusEffectEvent:IsA("RemoteEvent") and BurnAsset and BurnAsset:IsA("BasePart")) then
 	return
 end
 
-local CurrentBurnAsset: BasePart? = nil
+-- We'll also use the shared resources that the client and server and see and use
+const SharedModules = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("StatusEffect")
+const SharedNames = require(SharedModules.Names)
+const SharedTypes = require(SharedModules.Types)
 
-if StatusEffectEvent then
-	-- The framework will send valuable information on what effect happen and who it happened on
-	StatusEffectEvent.OnClientEvent:Connect(function(data)
-		if data.EffectName == "Burn" and data.Target then
-			if data.Message == "apply" and not CurrentBurnAsset then -- For applying the visual
-				local character = data.Target.Character :: Model?
-				local root = character and character:WaitForChild("HumanoidRootPart") :: BasePart?
-				if not (character and root) then
-					return
-				end
+local CurrentBurnAssets: { [Humanoid]: BasePart } = {}
 
-				-- The asset is assumed to have been preconfigured
-				local asset = BurnAsset:Clone() :: BasePart
-				asset.CFrame = character.WorldPivot
-				asset.Parent = workspace
-
-				local weld = Instance.new("WeldConstraint")
-				weld.Part0 = root
-				weld.Part1 = asset
-				weld.Parent = asset
-				CurrentBurnAsset = asset
-			elseif data.Message == "remove" and CurrentBurnAsset then -- Removing the visual
-				CurrentBurnAsset:Destroy()
-			elseif data.Message == "tick" then -- We even can add tick based replications
-				-- other code stuff here or whatever lol
+-- The framework will send valuable information on what effect happen and who it happened on
+StatusEffectEvent.OnClientEvent:Connect(function(data: SharedTypes.Replication)
+	if data.EffectName == SharedNames.Burn and data.Target then
+		if data.Message == "apply" and not CurrentBurnAssets[data.Target] then -- For applying the visual
+			local character = data.Target:FindFirstAncestorWhichIsA("Model")
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if not (character and root and root:IsA("BasePart")) then
+				return
 			end
+
+			-- The asset is assumed to have been preconfigured
+			local asset = BurnAsset:Clone()
+			asset.CFrame = character.WorldPivot
+			asset.Parent = workspace
+
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = root
+			weld.Part1 = asset
+			weld.Parent = asset
+			CurrentBurnAssets[data.Target] = asset
+		elseif data.Message == "remove" and CurrentBurnAssets[data.Target] then -- Removing the visual
+			CurrentBurnAssets[data.Target]:Destroy()
+		elseif data.Message == "tick" then -- We even can add tick based replications if need be
 		end
-	end)
-end
+	end
+end)

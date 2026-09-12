@@ -1,15 +1,6 @@
--- Messages that the client should recognize for effect statuses
--- These are used to show the proper visual feedback on such effect
-export type EventMessages = {
-	Apply: string,
-	Tick: string,
-	Remove: string,
-}
-
 -- Dependencies that the constructor needs to have injected before it can work
 export type ConstructorDependencies = {
 	RemoteEvent: RemoteEvent,
-	EventMessages: EventMessages,
 	MaxNumberPerHumanoid: number?,
 }
 
@@ -50,7 +41,6 @@ export type EffectContext = {
 -- The actual object type for a StatusEffectObject
 export type StatusEffectObject = {
 	-- Properties
-	EventMessages: EventMessages,
 	MaxNumberPerHumanoid: number,
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },

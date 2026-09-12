@@ -1,31 +1,30 @@
 --[[
-    This is a test server script for the StatusEffect framework.
-    This is only for demostration purposes only but is good to read through to know how to work it!
+    This is a demostration ServerScript for the StatusEffect framework.
+	Use this as a reference for how the server might use and register effects for the framework!
 ]]
 
-const ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- You can delete this script if this is in production
+if not game:GetService("RunService"):IsStudio() then
+	script:Destroy()
+end
+
 const Players = game:GetService("Players")
+const ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- We'll use the Burn effect example
 const StatusEffectEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("StatusEffect")
-
--- Create dependencies and create object
-const Framework = script.Parent.StatusEffect
-const StatusEffect = require(Framework.StatusEffect)
-
-const EventMessages: StatusEffect.EventMessages = {
-	Apply = "apply",
-	Tick = "tick",
-	Remove = "remove",
-}
+const SharedNames = require(ReplicatedStorage.Shared.StatusEffect.Names)
+const StatusEffect = require(script.Parent.StatusEffect.StatusEffect)
 const MaxNumberPerHumanoid = 5
+
+-- Construct the object
 local Manager = StatusEffect.New({
 	MaxNumberPerHumanoid = MaxNumberPerHumanoid,
 	RemoteEvent = StatusEffectEvent :: RemoteEvent,
-	EventMessages = EventMessages,
 })
 
--- Add a burn effect
-const EffectName = "Burn"
-Manager:RegisterEffect(EffectName, {
+-- Register the effect
+Manager:RegisterEffect(SharedNames.Burn, {
 	Duration = 10,
 	Interval = 1,
 	MaxStacks = 3,
@@ -45,11 +44,11 @@ Manager:RegisterEffect(EffectName, {
 })
 
 -- Effect is now registered, let's use it on our character!
-task.wait(3) -- Player may or maynot be fully loaded in
+task.wait(3) -- Player may or may not be fully loaded in
 local FirstPlayer = Players:GetPlayers()[1]
 local Humanoid = FirstPlayer.Character and FirstPlayer.Character:WaitForChild("Humanoid")
 if Humanoid and Humanoid:IsA("Humanoid") then
-	Manager:ApplyEffect(Humanoid, EffectName)
+	Manager:ApplyEffect(Humanoid, SharedNames.Burn)
 end
 
 -- By here, the humanoid will have the burn effect and start taking damage over time

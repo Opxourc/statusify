@@ -1,15 +1,16 @@
+const ReplicatedStorage = game:GetService("ReplicatedStorage")
 const RunService = game:GetService("RunService")
 const Players = game:GetService("Players")
 
 const CurrentDirectory = script.Parent
 const Types = require(CurrentDirectory.Types)
 const Defaults = require(CurrentDirectory.Defaults)
+const SharedTypes = require(ReplicatedStorage.Shared.StatusEffect.Types)
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
 export type ConstructorDependencies = Types.ConstructorDependencies
 export type StatusEffectObject = Types.StatusEffectObject
 export type EffectDefinition = Types.EffectDefinition
-export type EventMessages = Types.EventMessages
 export type EffectInstance = Types.EffectInstance
 export type EffectContext = Types.EffectContext
 
@@ -67,7 +68,6 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectOb
 		return nil
 	end
 
-	self.EventMessages = dependencies.EventMessages
 	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or 3
 	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to the client
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
@@ -124,7 +124,7 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 					if effect.Definition.OnTick then
 						effect.Definition.OnTick(self:_createContext(humanoid, effect))
 					end
-					self:_sendReplication(humanoid, self.EventMessages.Tick, effectName)
+					self:_sendReplication(humanoid, "tick", effectName)
 				end
 			end
 		end
@@ -217,7 +217,7 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 	if effects[effectName] then
 		-- Call the replication event first before setting nil
 		-- This is because replication is goning to check the state of the effect for this humanoid again
-		self:_sendReplication(humanoid, self.EventMessages.Remove, effectName)
+		self:_sendReplication(humanoid, "remove", effectName)
 		effects[effectName] = nil
 		outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
 	end
@@ -226,16 +226,11 @@ end
 --[[
 	Sends a replication event to the client with information about the current state of an effect.
 ]]
-function StatusEffect:_sendReplication(humanoid: Humanoid, message: EventMessages, effectName: string): boolean
-	local player = Players:GetPlayerFromCharacter(humanoid.Parent)
-	if not player then
-		outputMessage(
-			"warn",
-			`Attempted to send a replication event when Player instance was found via humanoid: ({humanoid:GetFullName()})`
-		)
-		return false
-	end
-
+function StatusEffect:_sendReplication(
+	humanoid: Humanoid,
+	message: SharedTypes.EventMessage,
+	effectName: string
+): boolean
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
 		outputMessage(
@@ -255,10 +250,11 @@ function StatusEffect:_sendReplication(humanoid: Humanoid, message: EventMessage
 	end
 
 	-- Only give enough information to allow the client to build whatever representation they want
+
 	self.RemoteEvent:FireAllClients({
 		EffectName = effectName,
 		Message = message,
-		Target = player,
+		Target = humanoid,
 		Stacks = effect.Stacks,
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
@@ -360,7 +356,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		definition.OnApply(self:_createContext(humanoid, effect))
 	end
 
-	self:_sendReplication(humanoid, self.EventMessages.Apply, effectName)
+	self:_sendReplication(humanoid, "apply", effectName)
 	return true
 end
 
