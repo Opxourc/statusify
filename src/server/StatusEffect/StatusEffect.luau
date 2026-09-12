@@ -490,4 +490,37 @@ function StatusEffect:ClearEffect(
 	return true
 end
 
+-- Read Only Methods
+
+--[[
+	Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
+]]
+function StatusEffect:GetRegisteredEffect(effectName: string): EffectDefinition?
+	return self.RegisteredEffects[effectName]
+end
+
+--[[
+	Returns the active EffectInstance for a humanoid, or nil if it isn't active.
+]]
+function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
+	local effects = self.ActiveEffects[humanoid]
+	if not effects then
+		return nil
+	end
+
+	return effects[effectName]
+end
+
+--[[
+	Returns whether a humanoid currently has the given effect active.
+]]
+function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
+	local effects = self.ActiveEffects[humanoid]
+	if not effects then
+		return false
+	end
+
+	return effects[effectName] ~= nil
+end
+
 return table.freeze(StatusEffect)
