@@ -29,6 +29,10 @@ local function outputMessage(status: "warn" | "log", message: string)
 	end
 end
 
+local function mutateStack(effect: EffectInstance, applyValue: number)
+	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
+end
+
 local StatusEffect = {}
 StatusEffect.__index = StatusEffect
 
@@ -129,6 +133,10 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 			end
 		end
 	end)
+end
+
+function StatusEffect:_mutateStack(effect: EffectInstance, applyValue: number)
+	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
 end
 
 --[[
@@ -400,22 +408,28 @@ end
 
 --[[
 	Remove an effect status from a humanoid.
-	Use 'action' to determine whether all or one effect should be removed.
-	If 'action' is set to "all", you don't have to provide the 'effectName' arguement.
+	Use 'action' to determine how effect(s) should be removed.
+	
+	Actions:
+		remove - Remove one single effect, ignoring all stacks on it.
+		removeAll - Remove every effect from the humanoid.
+		decrement - Remove one stack of the effect. If the stack drops to 0, it will be removed automatically.
+	If the action is either "remove" or "decrement" you must specify the effectName.
 ]]
-function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", effectName: string?): boolean
-	if action == "one" then
-		if not effectName then
-			outputMessage(
-				"warn",
-				`Attempted to clear an effect from ({humanoid:GetFullName()}) despite no effectName being given.`
-			)
-			return false
-		end
+function StatusEffect:ClearEffect(
+	humanoid: Humanoid,
+	action: "remove" | "removeAll" | "decrement",
+	effectName: string?
+): boolean
+	if action == "remove" or action == "decrement" and not effectName then
+		outputMessage("warn", `Attempted to clear a effect when no effect name was specified.`)
+		return false
+	end
 
+	if action == "remove" then
 		self:_removeFromActive(humanoid, effectName)
 		return true
-	elseif action == "all" then
+	elseif action == "removeAll" then
 		local effects = self.ActiveEffects[humanoid]
 		if not effects then
 			return false
@@ -423,6 +437,17 @@ function StatusEffect:ClearEffect(humanoid: Humanoid, action: "one" | "all", eff
 
 		for name in effects do
 			self:_removeFromActive(humanoid, name)
+		end
+	elseif action == "decrement" then
+		local effects = self.ActiveEffects[humanoid]
+		if not effects then
+			return false
+		end
+
+		local effect = self.ActiveEffects[humanoid][effectName]
+		mutateStack(effect, -1)
+		if effect.Stacks == 0 then
+			self:_removeFromActive(humanoid, effectName)
 		end
 	end
 
