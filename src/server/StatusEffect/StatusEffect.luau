@@ -92,8 +92,10 @@ function StatusEffect:Destroy()
 		self.RuntimeConnection:Disconnect()
 	end
 
-	for humanoid, effectName in self.ActiveEffects do
-		self:_removeFromActive(humanoid, effectName)
+	for humanoid, effects in self.ActiveEffects do
+		for effectName in effects do
+			self:_removeFromActive(humanoid, effectName)
+		end
 	end
 
 	outputMessage("log", "StatusEffect object destroyed.")
@@ -112,17 +114,23 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 	return RunService.Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()
 
-		for humanoid, activeEffects in self.ActiveEffects do
-			for effectName, effect in activeEffects do
+		for humanoid, effects in self.ActiveEffects do
+			for effectName, effect in effects do
 				if now >= effect.ExpireTime then
 					self:_removeFromActive(humanoid, effectName)
 					if effect.Definition.OnRemove then
-						effect.Definition.OnRemove(self:_createContext(humanoid, effect))
+						local ok, err = pcall(effect.Definition.OnRemove, self:_createContext(humanoid, effect))
+						if not ok then
+							outputMessage("warn", `OnRemove callback for "{effectName}" errored: {err}`)
+						end
 					end
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
 					if effect.Definition.OnTick then
-						effect.Definition.OnTick(self:_createContext(humanoid, effect))
+						local ok, err = pcall(effect.Definition.OnTick, self:_createContext(humanoid, effect))
+						if not ok then
+							outputMessage("warn", `OnTick callback for "{effectName}" errored: {err}`)
+						end
 					end
 					self:_sendReplication(humanoid, "tick", effectName, effect.Definition)
 				end
@@ -228,6 +236,10 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 		self:_sendReplication(humanoid, "remove", effectName, effects[effectName].Definition)
 		effects[effectName] = nil
 		outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
+
+		if next(effects) == nil then
+			self.ActiveEffects[humanoid] = nil
+		end
 	end
 end
 
@@ -368,24 +380,37 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	end
 
 	local now = workspace:GetServerTimeNow()
-	local activeEffects = self.ActiveEffects[humanoid]
-	if not activeEffects then
-		activeEffects = {}
-		self.ActiveEffects[humanoid] = activeEffects
+	local effects = self.ActiveEffects[humanoid]
+	if not effects then
+		effects = {}
+		self.ActiveEffects[humanoid] = effects
 	end
 
-	local existingEffect = activeEffects[effectName]
-	if existingEffect then
+	local existing = effects[effectName]
+	if existing then
 		if definition.StackBehavior == "ignore" then
 			return true
 		end
 
 		if definition.StackBehavior == "stack" then
-			self:_mutateStack(humanoid, existingEffect, 1)
+			self:_mutateStack(humanoid, existing, 1)
 		end
 
-		existingEffect.ExpireTime = now + (definition.Duration :: number)
+		existing.ExpireTime = now + (definition.Duration :: number)
 		return true
+	end
+
+	local currentCount = 0
+	for _ in effects do
+		currentCount += 1
+	end
+
+	if currentCount >= self.MaxNumberPerHumanoid then
+		outputMessage(
+			"warn",
+			`Attempted to apply "{effectName}" onto ({humanoid:GetFullName()}) but it already has the maximum number of effects ({self.MaxNumberPerHumanoid}).`
+		)
+		return false
 	end
 
 	local effect: EffectInstance = {
@@ -397,9 +422,12 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		NextTickTime = now + (definition.Interval :: number),
 	}
 
-	activeEffects[effectName] = effect
+	effects[effectName] = effect
 	if definition.OnApply then
-		definition.OnApply(self:_createContext(humanoid, effect))
+		local ok, err = pcall(definition.OnApply, self:_createContext(humanoid, effect))
+		if not ok then
+			outputMessage("warn", `OnApply callback for "{effectName}" errored: {err}`)
+		end
 	end
 
 	self:_sendReplication(humanoid, "apply", effectName, definition)
@@ -444,7 +472,15 @@ function StatusEffect:ClearEffect(
 			return false
 		end
 
-		local effect = self.ActiveEffects[humanoid][effectName]
+		local effect = effects[effectName]
+		if not effect then
+			outputMessage(
+				"warn",
+				`Attempted to decrement "{effectName}" when it wasn't active on ({humanoid:GetFullName()})`
+			)
+			return false
+		end
+
 		self:_mutateStack(humanoid, effect, -1)
 		if effect.Stacks == 0 then
 			self:_removeFromActive(humanoid, effectName)
