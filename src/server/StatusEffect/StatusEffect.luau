@@ -124,7 +124,7 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 					if effect.Definition.OnTick then
 						effect.Definition.OnTick(self:_createContext(humanoid, effect))
 					end
-					self:_sendReplication(humanoid, "tick", effectName)
+					self:_sendReplication(humanoid, "tick", effectName, effect.Definition)
 				end
 			end
 		end
@@ -217,7 +217,7 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 	if effects[effectName] then
 		-- Call the replication event first before setting nil
 		-- This is because replication is goning to check the state of the effect for this humanoid again
-		self:_sendReplication(humanoid, "remove", effectName)
+		self:_sendReplication(humanoid, "remove", effectName, effects[effectName].Definition)
 		effects[effectName] = nil
 		outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
 	end
@@ -229,7 +229,8 @@ end
 function StatusEffect:_sendReplication(
 	humanoid: Humanoid,
 	message: SharedTypes.EventMessage,
-	effectName: string
+	effectName: string,
+	definition: EffectDefinition
 ): boolean
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
@@ -249,18 +250,33 @@ function StatusEffect:_sendReplication(
 		return false
 	end
 
-	-- Only give enough information to allow the client to build whatever representation they want
+	local shouldReplicate = false
+	if definition.Replicate then
+		if message == "apply" and definition.Replicate.Apply then
+			shouldReplicate = true
+		elseif message == "tick" and definition.Replicate.Tick then
+			shouldReplicate = true
+		elseif message == "remove" and definition.Replicate.Remove then
+			shouldReplicate = true
+		end
+	end
 
-	self.RemoteEvent:FireAllClients({
+	if not shouldReplicate then
+		return true
+	end
+
+	-- Only give enough information to allow the client to build whatever representation they want
+	local packet: SharedTypes.Replication = {
 		EffectName = effectName,
 		Message = message,
 		Target = humanoid,
 		Stacks = effect.Stacks,
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
-	})
+	}
+	self.RemoteEvent:FireAllClients(packet)
 
-	outputMessage("log", `Sent replication event for {effectName} for humanoid: ({humanoid:GetFullName()})`)
+	outputMessage("log", `Sent {message} replication event for {effectName} for humanoid: ({humanoid:GetFullName()})`)
 	return true
 end
 
@@ -278,6 +294,28 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 	definition.Interval = definition.Interval or Defaults.ED_Defaults.Interval
 	definition.MaxStacks = definition.MaxStacks or Defaults.ED_Defaults.MaxStacks
 	definition.StackBehavior = definition.StackBehavior or Defaults.ED_Defaults.StackBehavior
+
+	if not definition.Replicate then
+		definition.Replicate = {
+			Apply = Defaults.ED_Defaults.Replicate.Apply,
+			Tick = Defaults.ED_Defaults.Replicate.Tick,
+			Remove = Defaults.ED_Defaults.Replicate.Remove,
+		}
+	else
+		definition.Replicate = {
+			Apply = if definition.Replicate.Apply == nil
+				then Defaults.ED_Defaults.Replicate.Apply
+				else definition.Replicate.Apply,
+
+			Tick = if definition.Replicate.Tick == nil
+				then Defaults.ED_Defaults.Replicate.Tick
+				else definition.Replicate.Tick,
+
+			Remove = if definition.Replicate.Remove == nil
+				then Defaults.ED_Defaults.Replicate.Remove
+				else definition.Replicate.Remove,
+		}
+	end
 
 	self.RegisteredEffects[effectName] = definition
 	return true
@@ -356,7 +394,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		definition.OnApply(self:_createContext(humanoid, effect))
 	end
 
-	self:_sendReplication(humanoid, "apply", effectName)
+	self:_sendReplication(humanoid, "apply", effectName, definition)
 	return true
 end
 

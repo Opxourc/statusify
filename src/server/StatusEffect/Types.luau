@@ -8,7 +8,11 @@ export type ConstructorDependencies = {
 export type EffectDefinition = {
 	Duration: number?, -- How long 'one' stack should last naturally without any interuptions
 	Interval: number?, -- How fast ticks should be applied during the duration
-
+	Replicate: { -- Determines what points of the lifecycle should be replicated
+		Apply: boolean?,
+		Tick: boolean?,
+		Remove: boolean?,
+	}?,
 	MaxStacks: number?,
 	StackBehavior: "refresh" | "stack" | "ignore"?,
 	-- refresh - Reset duration

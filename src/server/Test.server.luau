@@ -29,6 +29,11 @@ Manager:RegisterEffect(SharedNames.Burn, {
 	Interval = 1,
 	MaxStacks = 3,
 	StackBehavior = "refresh",
+	Replicate = {
+		Apply = true,
+		Tick = false,
+		Remove = true,
+	},
 
 	-- Use the context that's given to know more about the effect
 	OnApply = function(context)
