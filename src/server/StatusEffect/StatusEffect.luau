@@ -9,12 +9,13 @@ const SharedTypes = require(ReplicatedStorage.Shared.StatusEffect.Types)
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
 export type ConstructorDependencies = Types.ConstructorDependencies
-export type StatusEffectObject = Types.StatusEffectObject
 export type EffectDefinition = Types.EffectDefinition
 export type EffectInstance = Types.EffectInstance
 export type EffectContext = Types.EffectContext
+export type StatusEffectExternal = Types.StatusEffectExternal
+export type StatusEffectInternal = Types.StatusEffectInternal
 
-local CurrentObject: StatusEffectObject? = nil -- Represents the single object the StatusEffect
+local CurrentObject: StatusEffectExternal? = nil -- Represents the single object the StatusEffect
 const Debugging = RunService:IsStudio()
 
 local function outputMessage(status: "warn" | "log", message: string)
@@ -27,6 +28,10 @@ local function outputMessage(status: "warn" | "log", message: string)
 	elseif status == "log" then
 		print(message)
 	end
+end
+
+local function annotateSelf(a: any): StatusEffectInternal
+	return a :: StatusEffectInternal
 end
 
 local StatusEffect = {}
@@ -43,7 +48,7 @@ end
 	Constructs a new StatusEffect object.
 	Only one object can exist at a time and should be referenced by .GetExistingObject() instead.
 ]]
-function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectObject?
+function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectExternal?
 	if CurrentObject then
 		outputMessage(
 			"warn",
@@ -82,6 +87,8 @@ end
 	Destructs the object, releasing everything it owns.
 ]]
 function StatusEffect:Destroy()
+	local self = annotateSelf(self)
+
 	CurrentObject = nil
 
 	for _, connection in self.JanitorConnections do
@@ -101,11 +108,17 @@ function StatusEffect:Destroy()
 	outputMessage("log", "StatusEffect object destroyed.")
 end
 
+function StatusEffect:_getSelf(): StatusEffectInternal
+	return self :: StatusEffectInternal
+end
+
 --[[
 	Initializes the Runtime for status effects, running their lifecycle automatically.
 	Must only be called once.
 ]]
 function StatusEffect:_createRuntime(): RBXScriptConnection?
+	local self = annotateSelf(self)
+
 	if self.RuntimeConnection ~= nil then
 		outputMessage("warn", "Attempted to create a new runtime connection while one already exists.")
 		return nil
@@ -143,6 +156,8 @@ end
 	Mutate the stack count of a effect to go up or down.
 ]]
 function StatusEffect:_mutateStack(humanoid: Humanoid, effect: EffectInstance, applyValue: number)
+	local self = annotateSelf(self)
+
 	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
 	self:_sendReplication(humanoid, "update", effect.Name, effect.Definition)
 end
@@ -163,6 +178,8 @@ end
 	Must only be called once.
 ]]
 function StatusEffect:_createJanitor(): { RBXScriptConnection }
+	local self = annotateSelf(self)
+
 	if self.JanitorConnections ~= nil and #self.JanitorConnections ~= 0 then
 		outputMessage("warn", "Attempted to create new janitor connections when they already exist.")
 		return {}
@@ -224,10 +241,12 @@ end
 --[[
 	Remove an active effect from a humanoid.
 ]]
-function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
+function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string): boolean
+	local self = annotateSelf(self)
+
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
-		return
+		return false
 	end
 
 	if effects[effectName] then
@@ -241,6 +260,8 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string)
 			self.ActiveEffects[humanoid] = nil
 		end
 	end
+
+	return true
 end
 
 --[[
@@ -252,6 +273,8 @@ function StatusEffect:_sendReplication(
 	effectName: string,
 	definition: EffectDefinition
 ): boolean
+	local self = annotateSelf(self)
+
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
 		outputMessage(
@@ -305,6 +328,8 @@ end
 	Properties will be defaulted to a value if they're nil.
 ]]
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
+	local self = annotateSelf(self)
+
 	if self.RegisteredEffects[effectName] then
 		outputMessage("warn", `Attempted to register "{effectName}" when it's already registered.`)
 		return false
@@ -346,6 +371,8 @@ end
 	Use 'terminate' to destroy all active instances of the effect instantly.
 ]]
 function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
+	local self = annotateSelf(self)
+
 	if not self.RegisteredEffects[effectName] then
 		outputMessage("warn", `Attempted to unregister "{effectName}" when it wasn't registered.`)
 		return false
@@ -373,6 +400,8 @@ end
 	This effect status should be registered first before any application of it can be used!
 ]]
 function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
+	local self = annotateSelf(self)
+
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
 		outputMessage("warn", `Attempted to apply unregistered effect "{effectName}" onto ({humanoid:GetFullName()})`)
@@ -449,6 +478,8 @@ function StatusEffect:ClearEffect(
 	action: "remove" | "removeAll" | "decrement",
 	effectName: string?
 ): boolean
+	local self = annotateSelf(self)
+
 	if (action == "remove" or action == "decrement") and not effectName then
 		outputMessage("warn", `Attempted to clear a effect when no effect name was specified.`)
 		return false
@@ -496,6 +527,7 @@ end
 	Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
 ]]
 function StatusEffect:GetRegisteredEffect(effectName: string): EffectDefinition?
+	local self = annotateSelf(self)
 	return self.RegisteredEffects[effectName]
 end
 
@@ -503,6 +535,8 @@ end
 	Returns the active EffectInstance for a humanoid, or nil if it isn't active.
 ]]
 function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
+	local self = annotateSelf(self)
+
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
 		return nil
@@ -515,6 +549,8 @@ end
 	Returns whether a humanoid currently has the given effect active.
 ]]
 function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
+	local self = annotateSelf(self)
+
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
 		return false

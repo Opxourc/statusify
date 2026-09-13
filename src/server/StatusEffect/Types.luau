@@ -1,3 +1,6 @@
+const ReplicatedStorage = game:GetService("ReplicatedStorage")
+const SharedTypes = require(ReplicatedStorage.Shared.StatusEffect.Types)
+
 -- Dependencies that the constructor needs to have injected before it can work
 export type ConstructorDependencies = {
 	RemoteEvent: RemoteEvent,
@@ -42,28 +45,45 @@ export type EffectContext = {
 	Stacks: number,
 }
 
--- The actual object type for a StatusEffectObject
-export type StatusEffectObject = {
-	-- Properties
+-- Public interface for scripts trying to use the framework
+export type StatusEffectExternal = {
+	HasEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
+	GetActiveEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> EffectInstance?,
+	GetRegisteredEffect: (self: StatusEffectInternal, effectName: string) -> EffectDefinition?,
+	ClearEffect: (
+		self: StatusEffectInternal,
+		humanoid: Humanoid,
+		action: "remove" | "removeAll" | "decrement",
+		effectName: string?
+	) -> boolean,
+	ApplyEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
+	UnregisterEffect: (self: StatusEffectInternal, effectName: string, terminate: boolean) -> boolean,
+	RegisterEffect: (self: StatusEffectInternal, effectName: string, definition: EffectDefinition) -> boolean,
+	Destroy: () -> (),
+}
+
+-- Private interface for the framework to work with
+export type StatusEffectInternal = StatusEffectExternal & {
+	JanitorConnections: { RBXScriptConnection },
+	RuntimeConnections: RBXScriptConnection,
 	MaxNumberPerHumanoid: number,
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
-	JanitorConnections: { RBXScriptConnection },
-	RuntimeConnections: RBXScriptConnection,
 
-	-- Private methods
-	_removeFromActive: (self: StatusEffectObject, humanoid: Humanoid, effectName: string) -> (),
-	_createContext: (self: StatusEffectObject, humanoid: Humanoid, effect: EffectInstance) -> EffectContext,
-	_createRuntime: (self: StatusEffectObject) -> RBXScriptConnection?,
-	_createJanitor: (self: StatusEffectObject) -> boolean,
-
-	-- Public methods
-	Destroy: (self: StatusEffectObject) -> (),
-	RegisterEffect: (self: StatusEffectObject, effectName: string, definition: EffectDefinition) -> boolean,
-	UnregisterEffect: (self: StatusEffectObject, effectName: string, terminate: boolean) -> boolean,
-	ClearEffect: (self: StatusEffectObject, Humanoid: Humanoid, action: "one" | "all") -> boolean,
-	ApplyEffect: (self: StatusEffectObject, humanoid: Humanoid, effectName: string) -> boolean,
+	_getSelf: (self: StatusEffectInternal) -> StatusEffectInternal,
+	_createRuntime: (self: StatusEffectInternal) -> RBXScriptConnection?,
+	_createContext: (self: StatusEffectInternal, humanoid: Humanoid, effect: EffectInstance) -> EffectContext,
+	_mutateStack: (self: StatusEffectInternal, humanoid: Humanoid, effect: EffectInstance, applyValue: number) -> (),
+	_createJanitor: (self: StatusEffectInternal) -> { RBXScriptConnection },
+	_removeFromActive: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
+	_sendReplication: (
+		self: StatusEffectInternal,
+		humanoid: Humanoid,
+		message: SharedTypes.EventMessage,
+		effectName: string,
+		definition: EffectDefinition
+	) -> boolean,
 }
 
 return table.freeze({})
