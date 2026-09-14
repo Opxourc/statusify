@@ -1,11 +1,9 @@
-const ReplicatedStorage = game:GetService("ReplicatedStorage")
 const RunService = game:GetService("RunService")
 const Players = game:GetService("Players")
 
-const CurrentDirectory = script.Parent
-const Types = require(CurrentDirectory.Types)
-const Defaults = require(CurrentDirectory.Defaults)
-const SharedTypes = require(ReplicatedStorage.Shared.StatusEffect.Types)
+const Types = require("./Types")
+const Defaults = require("./Defaults")
+const SharedTypes = require("@game/ReplicatedStorage/Shared/StatusEffect/Types")
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
 export type ConstructorDependencies = Types.ConstructorDependencies
@@ -30,7 +28,7 @@ local function outputMessage(status: "warn" | "log", message: string)
 	end
 end
 
-local function annotateSelf(a: any): StatusEffectInternal
+local function annotateSelf(a: any)
 	return a :: StatusEffectInternal
 end
 
@@ -73,8 +71,8 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 		return nil
 	end
 
-	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or 3
-	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to the client
+	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or Defaults.CD_DefaultMaxPerHumanoid -- The max number of effects a humanoid can take at a moment
+	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to clients
 	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
 	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
 
@@ -84,7 +82,7 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 end
 
 --[[
-	Destructs the object, releasing everything it owns.
+	Destroys the object, releasing everything it owns.
 ]]
 function StatusEffect:Destroy()
 	local self = annotateSelf(self)
@@ -108,9 +106,7 @@ function StatusEffect:Destroy()
 	outputMessage("log", "StatusEffect object destroyed.")
 end
 
-function StatusEffect:_getSelf(): StatusEffectInternal
-	return self :: StatusEffectInternal
-end
+-- Private methods
 
 --[[
 	Initializes the Runtime for status effects, running their lifecycle automatically.
@@ -127,24 +123,24 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 	return RunService.Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()
 
+		-- Thread the callbacks because we don't know how long a callback can last for
+		-- We also don't want it to halt the entire Heartbeat connection if one errors or yields
 		for humanoid, effects in self.ActiveEffects do
 			for effectName, effect in effects do
 				if now >= effect.ExpireTime then
 					self:_removeFromActive(humanoid, effectName)
-					if effect.Definition.OnRemove then
-						local ok, err = pcall(effect.Definition.OnRemove, self:_createContext(humanoid, effect))
-						if not ok then
-							outputMessage("warn", `OnRemove callback for "{effectName}" errored: {err}`)
-						end
-					end
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
+
 					if effect.Definition.OnTick then
-						local ok, err = pcall(effect.Definition.OnTick, self:_createContext(humanoid, effect))
-						if not ok then
-							outputMessage("warn", `OnTick callback for "{effectName}" errored: {err}`)
-						end
+						task.spawn(function()
+							local ok, err = pcall(effect.Definition.OnTick, self:_createContext(humanoid, effect))
+							if not ok then
+								outputMessage("warn", `OnTick callback for "{effectName}" errored: {err}`)
+							end
+						end)
 					end
+
 					self:_sendReplication(humanoid, "tick", effectName, effect.Definition)
 				end
 			end
@@ -153,7 +149,7 @@ function StatusEffect:_createRuntime(): RBXScriptConnection?
 end
 
 --[[
-	Mutate the stack count of a effect to go up or down.
+	Mutate the stack count of an effect to go up or down.
 ]]
 function StatusEffect:_mutateStack(humanoid: Humanoid, effect: EffectInstance, applyValue: number)
 	local self = annotateSelf(self)
@@ -174,7 +170,7 @@ function StatusEffect:_createContext(humanoid: Humanoid, effect: EffectInstance)
 end
 
 --[[
-	Initializes the Janitor and registers cleanup for existing, future, and existing players. 
+	Initializes the Janitor and registers cleanup for existing and future players. 
 	Must only be called once.
 ]]
 function StatusEffect:_createJanitor(): { RBXScriptConnection }
@@ -249,16 +245,28 @@ function StatusEffect:_removeFromActive(humanoid: Humanoid, effectName: string):
 		return false
 	end
 
-	if effects[effectName] then
-		-- Call the replication event first before setting nil
-		-- This is because replication is goning to check the state of the effect for this humanoid again
-		self:_sendReplication(humanoid, "remove", effectName, effects[effectName].Definition)
-		effects[effectName] = nil
-		outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
+	local effect = effects[effectName]
+	if not effect then
+		return false
+	end
 
-		if next(effects) == nil then
-			self.ActiveEffects[humanoid] = nil
-		end
+	-- Call the replication event first before setting nil
+	-- This is because replication is going to check the state of the effect for this humanoid again
+	self:_sendReplication(humanoid, "remove", effectName, effects[effectName].Definition)
+	effects[effectName] = nil
+	outputMessage("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
+
+	if next(effects) == nil then
+		self.ActiveEffects[humanoid] = nil
+	end
+
+	if effect.Definition.OnRemove then
+		task.spawn(function()
+			local ok, err = pcall(effect.Definition.OnRemove, self:_createContext(humanoid, effect))
+			if not ok then
+				outputMessage("warn", `OnRemove callback for "{effectName}" errored: {err}`)
+			end
+		end)
 	end
 
 	return true
@@ -325,9 +333,17 @@ function StatusEffect:_sendReplication(
 	return true
 end
 
+-- Functionality methods
+
 --[[
-	Register an effect status to be avaliable for use.
+	Register an effect status to be available for use.
 	Properties will be defaulted to a value if they're nil.
+	
+	Use a number <= 0 for Interval to disable ticking (no logic and replication for ticks)
+	Use math.huge for Duration for a permanent (effect is removed if the humanoid dies)
+
+	Note: Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
+	Lower intervals cause 'OnTick' to execute more frequently and can increase CPU usage. Consider using 0.5 or 1 second(s) for effects that only need periodic updates.
 ]]
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	local self = annotateSelf(self)
@@ -392,9 +408,7 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 				continue
 			end
 
-			task.spawn(function()
-				self:_removeFromActive(humanoid, effectName)
-			end)
+			self:_removeFromActive(humanoid, effectName)
 		end
 	end
 
@@ -402,7 +416,7 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 end
 
 --[[
-	Apply and effect status onto a humanoid.
+	Apply an effect status onto a humanoid.
 	This effect status should be registered first before any application of it can be used!
 ]]
 function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
@@ -424,14 +438,13 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	local existing = effects[effectName]
 	if existing then
 		if definition.StackBehavior == "ignore" then
-			return true
-		end
-
-		if definition.StackBehavior == "stack" then
+		elseif definition.StackBehavior == "stack" then
 			self:_mutateStack(humanoid, existing, 1)
+		elseif definition.StackBehavior == "refresh" then
+			existing.ExpireTime = now + definition.Duration
+			self:_sendReplication(humanoid, "update", effectName, definition)
 		end
 
-		existing.ExpireTime = now + (definition.Duration :: number)
 		return true
 	end
 
@@ -492,8 +505,7 @@ function StatusEffect:ClearEffect(
 	end
 
 	if action == "remove" then
-		self:_removeFromActive(humanoid, effectName)
-		return true
+		return self:_removeFromActive(humanoid, effectName)
 	elseif action == "removeAll" then
 		local effects = self.ActiveEffects[humanoid]
 		if not effects then

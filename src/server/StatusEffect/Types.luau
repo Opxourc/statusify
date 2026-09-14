@@ -1,5 +1,4 @@
-const ReplicatedStorage = game:GetService("ReplicatedStorage")
-const SharedTypes = require(ReplicatedStorage.Shared.StatusEffect.Types)
+const SharedTypes = require("@game/ReplicatedStorage/Shared/StatusEffect/Types")
 
 -- Dependencies that the constructor needs to have injected before it can work
 export type ConstructorDependencies = {
@@ -60,13 +59,13 @@ export type StatusEffectExternal = {
 	ApplyEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
 	UnregisterEffect: (self: StatusEffectInternal, effectName: string, terminate: boolean) -> boolean,
 	RegisterEffect: (self: StatusEffectInternal, effectName: string, definition: EffectDefinition) -> boolean,
-	Destroy: () -> (),
+	Destroy: (self: StatusEffectInternal) -> (),
 }
 
 -- Private interface for the framework to work with
 export type StatusEffectInternal = StatusEffectExternal & {
 	JanitorConnections: { RBXScriptConnection },
-	RuntimeConnections: RBXScriptConnection,
+	RuntimeConnection: RBXScriptConnection,
 	MaxNumberPerHumanoid: number,
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
