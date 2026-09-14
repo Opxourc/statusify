@@ -10,6 +10,7 @@ Defaults.ED_Defaults = table.freeze({
 		Apply = true,
 		Tick = true,
 		Remove = true,
+		Update = true,
 	},
 })
 

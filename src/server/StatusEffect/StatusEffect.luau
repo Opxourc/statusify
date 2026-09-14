@@ -301,6 +301,8 @@ function StatusEffect:_sendReplication(
 			shouldReplicate = true
 		elseif message == "remove" and definition.Replicate.Remove then
 			shouldReplicate = true
+		elseif message == "update" and definition.Replicate.Update then
+			shouldReplicate = true
 		end
 	end
 
@@ -359,6 +361,10 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 			Remove = if definition.Replicate.Remove == nil
 				then Defaults.ED_Defaults.Replicate.Remove
 				else definition.Replicate.Remove,
+
+			Update = if definition.Replicate.Update == nil
+				then Defaults.ED_Defaults.Replicate.Update
+				else definition.Replicate.Update,
 		}
 	end
 

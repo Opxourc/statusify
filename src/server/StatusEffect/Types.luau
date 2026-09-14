@@ -15,6 +15,7 @@ export type EffectDefinition = {
 		Apply: boolean?,
 		Tick: boolean?,
 		Remove: boolean?,
+		Update: boolean?,
 	}?,
 	MaxStacks: number?,
 	StackBehavior: "refresh" | "stack" | "ignore"?,
