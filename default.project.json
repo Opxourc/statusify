@@ -3,16 +3,25 @@
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": {
-      "$path": "src/server"
+      "Statusify": {
+        "$className": "Folder",
+        "Tests": {
+          "$path": "tests"
+        },
+        "Example": {
+          "$path": "example"
+        },
+        "Source": {
+          "$path": "src/server"
+        }
+      }
     },
     "ReplicatedStorage": {
       "Shared": {
-        "$path": "src/shared"
-      }
-    },
-    "StarterPlayer": {
-      "StarterPlayerScripts": {
-        "$path": "src/client"
+        "$className": "Folder",
+        "Statusify": {
+          "$path": "src/shared"
+        }
       }
     }
   }
