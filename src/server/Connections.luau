@@ -31,7 +31,7 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 						task.spawn(function()
 							local ok, err = pcall(effect.Definition.OnTick, Utilities.CreateContext(humanoid, effect))
 							if not ok then
-								Logger.Output("error", `OnTick callback for ({effectName}) errored: {err}`)
+								Logger.Output("error", `OnTick callback for ({effectName}) errored: ({err}).`)
 							end
 						end)
 					end
@@ -49,7 +49,7 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 	end)
 end
 
-function Connections.CreaterWatcher(self: Types.StatusEffectInternal): { RBXScriptConnection }
+function Connections.CreateWatcher(self: Types.StatusEffectInternal): { RBXScriptConnection }
 	if self.WatcherConnections ~= nil and #self.WatcherConnections ~= 0 then
 		Logger.Output("warn", "Attempted to create new watcher connections when they already exist.")
 		return {}

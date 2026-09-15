@@ -67,7 +67,7 @@ function Utilities.RemoveFromActive(self: Types.StatusEffectInternal, humanoid: 
 		task.spawn(function()
 			local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
 			if not ok then
-				Logger.Output("error", `OnRemove callback for "{effectName}" errored: {err}`)
+				Logger.Output("error", `OnRemove callback for "{effectName}" errored: ({err}).`)
 			end
 		end)
 	end

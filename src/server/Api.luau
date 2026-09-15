@@ -41,9 +41,9 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 	local self = setmetatable({}, StatusEffect)
 
 	-- Connections to handle the active states of effects when a humanoid dies or if a player leaves and joins
-	self.WatcherConnections = Connections.CreaterWatcher(self)
-	if #self.JanitorConnections == 0 then
-		Logger.Output("warn", "Unable to create object due to janitor creation failure.")
+	self.WatcherConnections = Connections.CreateWatcher(self)
+	if #self.WatcherConnections == 0 then
+		Logger.Output("warn", "Unable to create object due to watcher creation failure.")
 		return nil
 	end
 
@@ -65,14 +65,11 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 	return self
 end
 
---[[
-	Destroys the object, releasing everything it owns.
-]]
 function StatusEffect:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 	CurrentObject = nil
 
-	for _, connection in self.JanitorConnections do
+	for _, connection in self.WatcherConnections do
 		connection:Disconnect()
 	end
 
@@ -89,18 +86,6 @@ function StatusEffect:Destroy()
 	Logger.Output("log", "StatusEffect object destroyed.")
 end
 
---[[
-	Register an effect status to be available for use.
-	Properties will be defaulted to a value if they're nil.
-	
-	Use a number <= 0 for Interval to disable ticking (no logic and replication for ticks)
-	Use math.huge for Duration for a permanent duration (effect is either removed when humanoid dies or manual removal)
-
-	Note: Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
-	Lower intervals cause 'OnTick' to execute more frequently and can increase CPU usage. Consider using 0.5 or 1 second(s) for effects that only need periodic updates.
-
-	Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
-]]
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
@@ -145,10 +130,6 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 	return true
 end
 
---[[
-	Unregister an effect status that will no longer be used.
-	Use 'terminate' to destroy all active instances of the effect instantly.
-]]
 function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
@@ -172,17 +153,13 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 	return true
 end
 
---[[
-	Apply an effect status onto a humanoid.
-	This effect status should be registered first before any application of it can be used!
-]]
 function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
 
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
-		Logger.Output("warn", `Attempted to apply unregistered effect ({effectName}) onto ({humanoid:GetFullName()})`)
+		Logger.Output("warn", `Attempted to apply unregistered effect ({effectName}) onto ({humanoid:GetFullName()}).`)
 		return false
 	end
 
@@ -224,7 +201,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 			"warn",
 			`Attempted to apply ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxNumberPerHumanoid}).`
 		)
-		return true
+		return false
 	end
 
 	local effect: EffectInstance = {
@@ -258,16 +235,6 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	return true
 end
 
---[[
-	Remove an effect status from a humanoid.
-	Use 'action' to determine how effect(s) should be removed.
-	
-	Actions:
-		remove - Remove one single effect, ignoring all stacks on it.
-		removeAll - Remove every effect from the humanoid.
-		decrement - Remove one stack of the effect. If the stack drops to 0, it will be removed automatically.
-	If the action is either "remove" or "decrement" you must specify the effectName.
-]]
 function StatusEffect:ClearEffect(
 	humanoid: Humanoid,
 	action: "remove" | "removeAll" | "decrement",
@@ -315,11 +282,17 @@ function StatusEffect:ClearEffect(
 			return false
 		end
 
+		local previous = effect.Stacks
 		Utilities.MutateStack(self, humanoid, effect, -1)
+		local subsequent = effect.Stacks
+
 		if effect.Stacks == 0 then
 			Utilities.RemoveFromActive(self, humanoid, effectName :: string)
 		end
-		Logger.Output("log", `Decremented ({effectName}) status effect from ({humanoid:GetFullName()}).`)
+		Logger.Output(
+			"log",
+			`Decremented ({effectName}) status effect from ({humanoid:GetFullName()}) to ({previous} -> {subsequent}).`
+		)
 	else
 		Logger.Output("warn", `Unknown action provided. Got: ({action})`)
 		return false
@@ -328,16 +301,10 @@ function StatusEffect:ClearEffect(
 	return true
 end
 
---[[
-	Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
-]]
 function StatusEffect:GetRegisteredEffect(effectName: string): EffectDefinition?
 	return Utilities.AnnotateSelf(self).RegisteredEffects[string.lower(effectName)]
 end
 
---[[
-	Returns the active EffectInstance for a humanoid, or nil if it isn't active.
-]]
 function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
 	local activeEffects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
 	if not activeEffects then
@@ -347,9 +314,6 @@ function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): E
 	return activeEffects[string.lower(effectName)]
 end
 
---[[
-	Returns whether a humanoid currently has the given effect active.
-]]
 function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
 	local effects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
 	if not effects then
