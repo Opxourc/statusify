@@ -3,6 +3,7 @@ const Players = game:GetService("Players")
 
 const Replication = require("./Replication")
 const Utilities = require("./Utilities")
+const Threads = require("./Threads")
 const Logger = require("./Logger")
 const Types = require("./Types")
 
@@ -28,12 +29,18 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 
 					-- Run callback for tick
 					if effect.Definition.OnTick then
-						task.spawn(function()
-							local ok, err = pcall(effect.Definition.OnTick, Utilities.CreateContext(humanoid, effect))
-							if not ok then
-								Logger.Output("error", `OnTick callback for ({effectName}) errored: ({err}).`)
-							end
-						end)
+						Threads.AddToActive(
+							self,
+							humanoid,
+							effectName,
+							task.spawn(function()
+								local ok, err =
+									pcall(effect.Definition.OnTick, Utilities.CreateContext(humanoid, effect))
+								if not ok then
+									Logger.Output("error", `OnTick callback for ({effectName}) errored: ({err}).`)
+								end
+							end)
+						)
 					end
 
 					Replication.Replicate({
@@ -49,13 +56,13 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 	end)
 end
 
-function Connections.CreateWatcher(self: Types.StatusEffectInternal): { RBXScriptConnection }
-	if self.WatcherConnections ~= nil and #self.WatcherConnections ~= 0 then
+function Connections.CreateWatcher(self: Types.StatusEffectInternal): { [RBXScriptConnection]: true }
+	if self.WatcherConnections ~= nil and next(self.WatcherConnections) ~= nil then
 		Logger.Output("warn", "Attempted to create new watcher connections when they already exist.")
 		return {}
 	end
 
-	local connections: { RBXScriptConnection } = {}
+	local connections: { [RBXScriptConnection]: true } = {}
 	local function getHumanoid(character: Model?, waitForHumanoid: boolean): Humanoid?
 		if not character then
 			return nil
@@ -75,17 +82,16 @@ function Connections.CreateWatcher(self: Types.StatusEffectInternal): { RBXScrip
 		end
 
 		-- If the humanoid dies, remove all effects automatically
-		table.insert(
-			connections,
-			humanoid.Died:Connect(function()
-				self:ClearEffect(humanoid, "removeAll")
-			end)
-		)
+		connections[humanoid.Died:Connect(function()
+			self:ClearEffect(humanoid, "removeAll")
+			Threads.CancelAllFromActive(self, humanoid, "cancelAll")
+		end)] =
+			true
 	end
 
 	local function watchPlayer(player: Player)
 		createDiedEvent(player.Character)
-		table.insert(connections, player.CharacterAdded:Connect(createDiedEvent))
+		connections[player.CharacterAdded:Connect(createDiedEvent)] = true
 	end
 
 	-- Catch any players that are already in the game
@@ -94,16 +100,15 @@ function Connections.CreateWatcher(self: Types.StatusEffectInternal): { RBXScrip
 	end
 
 	-- Connection to catch incoming players and outgoing players
-	table.insert(connections, Players.PlayerAdded:Connect(watchPlayer))
-	table.insert(
-		connections,
-		Players.PlayerRemoving:Connect(function(player)
-			local humanoid = getHumanoid(player.Character, false)
-			if humanoid then
-				self:ClearEffect(humanoid, "removeAll")
-			end
-		end)
-	)
+	connections[Players.PlayerAdded:Connect(watchPlayer)] = true
+	connections[Players.PlayerRemoving:Connect(function(player)
+		local humanoid = getHumanoid(player.Character, false)
+		if humanoid then
+			self:ClearEffect(humanoid, "removeAll")
+			Threads.CancelAllFromActive(self, humanoid, "cancelAll")
+		end
+	end)] =
+		true
 
 	return connections
 end

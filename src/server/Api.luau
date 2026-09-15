@@ -1,5 +1,6 @@
 const Types = require("./Types")
 const Logger = require("./Logger")
+const Threads = require("./Threads")
 const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
 const Connections = require("./Connections")
@@ -42,7 +43,7 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 
 	-- Connections to handle the active states of effects when a humanoid dies or if a player leaves and joins
 	self.WatcherConnections = Connections.CreateWatcher(self)
-	if #self.WatcherConnections == 0 then
+	if next(self.WatcherConnections) == nil then
 		Logger.Output("warn", "Unable to create object due to watcher creation failure.")
 		return nil
 	end
@@ -56,8 +57,9 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 
 	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or Defaults.CD_DefaultMaxPerHumanoid -- The max number of effects a humanoid can take at a moment
 	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to clients
-	self.RegisteredEffects = {} :: { [string]: EffectDefinition } -- These are effects that are considered valid
-	self.ActiveEffects = {} :: { [Humanoid]: { [string]: EffectInstance } } -- Effects that are currently running on a humanoid
+	self.RegisteredEffects = {} -- These are effects that are considered valid
+	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
+	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
 
 	Logger.Output("log", "StatusEffect object created.")
 	CurrentObject = self
@@ -69,7 +71,7 @@ function StatusEffect:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 	CurrentObject = nil
 
-	for _, connection in self.WatcherConnections do
+	for connection in self.WatcherConnections do
 		connection:Disconnect()
 	end
 
@@ -147,6 +149,7 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 				continue
 			end
 			Utilities.RemoveFromActive(self, humanoid, effectName)
+			Threads.CancelAllFromActive(self, humanoid, "cancelEffect", effectName) -- Cancel all running threads for this effect
 		end
 	end
 
@@ -217,12 +220,17 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 
 	-- Run callback for application
 	if definition.OnApply then
-		task.spawn(function()
-			local ok, err = pcall(definition.OnApply, Utilities.CreateContext(humanoid, effect))
-			if not ok then
-				Logger.Output("warn", `OnApply callback for ({effectName}) errored: {err}`)
-			end
-		end)
+		Threads.AddToActive(
+			self,
+			humanoid,
+			effectName,
+			task.spawn(function()
+				local ok, err = pcall(definition.OnApply, Utilities.CreateContext(humanoid, effect))
+				if not ok then
+					Logger.Output("warn", `OnApply callback for ({effectName}) errored: ({err}).`)
+				end
+			end)
+		)
 	end
 
 	Replication.Replicate({

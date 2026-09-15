@@ -1,4 +1,5 @@
 const Replication = require("./Replication")
+const Threads = require("./Threads")
 const Logger = require("./Logger")
 const Types = require("./Types")
 
@@ -64,13 +65,21 @@ function Utilities.RemoveFromActive(self: Types.StatusEffectInternal, humanoid: 
 
 	-- Run callback for the removal
 	if effect.Definition.OnRemove then
-		task.spawn(function()
-			local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
-			if not ok then
-				Logger.Output("error", `OnRemove callback for "{effectName}" errored: ({err}).`)
-			end
-		end)
+		Threads.AddToActive(
+			self,
+			humanoid,
+			effectName,
+			task.spawn(function()
+				local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
+				if not ok then
+					Logger.Output("error", `OnRemove callback for "{effectName}" errored: ({err}).`)
+				end
+			end)
+		)
 	end
+
+	-- Threads are not cancelled here because we want them to naturally finish up
+	-- They're only cancelled if they're forced to cancel like 'terminate' through Unregister
 
 	return true
 end

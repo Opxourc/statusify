@@ -111,13 +111,13 @@ export type StatusEffectExternal = {
 
 -- Private interface for the framework to work with
 export type StatusEffectInternal = StatusEffectExternal & {
-	WatcherConnections: { RBXScriptConnection },
+	WatcherConnections: { [RBXScriptConnection]: true },
 	RuntimeConnection: RBXScriptConnection,
 	MaxNumberPerHumanoid: number,
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
-	ActiveThreads: { [Humanoid]: { [string]: { thread } } },
+	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true } } },
 }
 
 return table.freeze({})
