@@ -1,9 +1,9 @@
-local Helpers = require(script.Parent.TestHelpers)
+const TestHelpers = require("./TestHelpers")
 
-local Manager = Helpers.NewManager(2)
-local Humanoid = Helpers.NewHumanoid()
-
-local Registered = Manager:RegisterEffect("stacking", {
+local Object = TestHelpers.NewObject(2)
+local Humanoid = TestHelpers.NewHumanoid()
+local EffectName = "stacking"
+local Registered = Object:RegisterEffect(EffectName, {
 	Duration = 30,
 	MaxStacks = 2,
 	StackBehavior = "stack",
@@ -11,63 +11,80 @@ local Registered = Manager:RegisterEffect("stacking", {
 		Apply = false,
 		Tick = false,
 		Remove = false,
+		Update = false,
 	},
 })
-Helpers.Assert(Registered, "Expected the first effect registration to succeed")
-Helpers.AssertEqual(Manager:RegisterEffect("stacking", {}), false, "Expected duplicate registration to fail")
 
-local Definition = Manager:GetRegisteredEffect("stacking")
-Helpers.Assert(Definition ~= nil, "Expected the registered definition to be readable")
-Helpers.AssertEqual(Definition.Duration, 30, "Expected the configured duration to be preserved")
-Helpers.AssertEqual(Definition.Interval, 1, "Expected the default interval to be applied")
-Helpers.AssertEqual(Definition.MaxStacks, 2, "Expected the configured stack limit to be preserved")
+TestHelpers.Assert(Registered, "Expected the first effect registration to succeed.")
+TestHelpers.AssertEqual(Object:RegisterEffect(EffectName, {}), false, "Expected duplicate registration to fail.")
 
-Helpers.AssertEqual(Manager:ApplyEffect(Humanoid, "missing"), false, "Expected unregistered effects to be rejected")
-Helpers.AssertEqual(Manager:ApplyEffect(Humanoid, "stacking"), true, "Expected an effect to apply")
-Helpers.AssertEqual(Manager:ApplyEffect(Humanoid, "stacking"), true, "Expected a second application to stack")
-Helpers.AssertEqual(
-	Manager:ApplyEffect(Humanoid, "stacking"),
+local Definition = Object:GetRegisteredEffect(EffectName)
+TestHelpers.Assert(Definition ~= nil, "Expected the registered definition to be readable.")
+TestHelpers.AssertEqual(Definition.Duration, 30, "Expected the configured duration to be preserved.")
+TestHelpers.AssertEqual(Definition.Interval, 1, "Expected the default interval to be applied.")
+TestHelpers.AssertEqual(Definition.MaxStacks, 2, "Expected the configured stack limit to be preserved.")
+
+TestHelpers.AssertEqual(Object:ApplyEffect(Humanoid, "missing"), false, "Expected unregistered effects to be rejected.")
+TestHelpers.AssertEqual(Object:ApplyEffect(Humanoid, EffectName), true, "Expected an effect to apply.") -- Stack -> 1
+TestHelpers.AssertEqual(Object:ApplyEffect(Humanoid, EffectName), true, "Expected a second application to stack.") -- Stack -> 2 (max)
+TestHelpers.AssertEqual(
+	Object:ApplyEffect(Humanoid, EffectName), -- Stack x-> 3
 	true,
-	"Expected applications at the stack cap to succeed"
+	"Expected applications at the stack cap to succeed."
 )
 
-local Active = Manager:GetActiveEffect(Humanoid, "stacking")
-Helpers.Assert(Active ~= nil, "Expected the effect to be active")
-Helpers.AssertEqual(Active.Stacks, 2, "Expected stacks to stop at MaxStacks")
-Helpers.Assert(Manager:HasEffect(Humanoid, "stacking"), "Expected HasEffect to report the active effect")
+local Active = Object:GetActiveEffect(Humanoid, EffectName)
+TestHelpers.Assert(Active ~= nil, "Expected the effect to be active.")
+TestHelpers.AssertEqual(Active.Stacks, 2, "Expected stacks to stop at MaxStacks.")
+TestHelpers.Assert(Object:HasEffect(Humanoid, "stacking"), "Expected HasEffect to report the active effect.")
 
-Helpers.AssertEqual(Manager:ClearEffect(Humanoid, "decrement", "stacking"), true, "Expected decrement to succeed")
-Helpers.AssertEqual(Manager:GetActiveEffect(Humanoid, "stacking").Stacks, 1, "Expected decrement to remove one stack")
-Helpers.AssertEqual(
-	Manager:ClearEffect(Humanoid, "decrement", "stacking"),
+TestHelpers.AssertEqual(Object:ClearEffect(Humanoid, "decrement", EffectName), true, "Expected decrement to succeed.") -- Stack -> 1
+TestHelpers.AssertEqual(
+	Object:GetActiveEffect(Humanoid, EffectName).Stacks,
+	1,
+	"Expected decrement to remove one stack."
+)
+TestHelpers.AssertEqual(
+	Object:ClearEffect(Humanoid, "decrement", EffectName), -- stack -> 0 (remove)
 	true,
-	"Expected the final decrement to succeed"
+	"Expected the final decrement to succeed."
 )
-Helpers.Assert(not Manager:HasEffect(Humanoid, "stacking"), "Expected zero stacks to remove the effect")
+TestHelpers.Assert(not Object:HasEffect(Humanoid, EffectName), "Expected zero stacks to remove the effect.")
 
-Helpers.AssertEqual(Manager:ClearEffect(Humanoid, "remove"), false, "Expected remove without a name to fail")
-Helpers.AssertEqual(
-	Manager:ClearEffect(Humanoid, "removeAll"),
+TestHelpers.AssertEqual(Object:ClearEffect(Humanoid, "remove"), false, "Expected remove without a name to fail.")
+TestHelpers.AssertEqual(
+	Object:ClearEffect(Humanoid, "removeAll"),
 	false,
-	"Expected removeAll on an empty humanoid to fail"
+	"Expected removeAll on an empty humanoid to fail."
 )
 
-local First = Manager:RegisterEffect("first", { Duration = 30 })
-local Second = Manager:RegisterEffect("second", { Duration = 30 })
-local Third = Manager:RegisterEffect("third", { Duration = 30 })
-Helpers.Assert(First and Second and Third, "Expected capacity test effects to register")
-Helpers.Assert(Manager:ApplyEffect(Humanoid, "first"), "Expected the first effect to apply")
-Helpers.Assert(Manager:ApplyEffect(Humanoid, "second"), "Expected the second effect to apply")
-Helpers.AssertEqual(
-	Manager:ApplyEffect(Humanoid, "third"),
+local FirstName = "first"
+local SecondName = "second"
+local ThirdName = "third"
+
+local First = Object:RegisterEffect(FirstName, { Duration = 30 })
+local Second = Object:RegisterEffect(SecondName, { Duration = 30 })
+local Third = Object:RegisterEffect(ThirdName, { Duration = 30 })
+
+TestHelpers.Assert(First and Second and Third, "Expected capacity test effects to register.")
+TestHelpers.Assert(Object:ApplyEffect(Humanoid, FirstName), "Expected the first effect to apply.") -- active -> 1
+TestHelpers.Assert(Object:ApplyEffect(Humanoid, SecondName), "Expected the second effect to apply.") -- active -> 2 (max)
+TestHelpers.AssertEqual(
+	Object:ApplyEffect(Humanoid, "third"),
 	false,
-	"Expected the per-humanoid limit to reject a third effect"
+	"Expected the per-humanoid limit to reject a third effect."
 )
 
-Helpers.AssertEqual(Manager:UnregisterEffect("first", true), true, "Expected unregister to succeed")
-task.wait()
-Helpers.Assert(not Manager:HasEffect(Humanoid, "first"), "Expected terminating unregister to remove active effects")
-Helpers.AssertEqual(Manager:UnregisterEffect("first", false), false, "Expected repeated unregister to fail")
+TestHelpers.AssertEqual(Object:UnregisterEffect(FirstName, true), true, "Expected unregister to succeed.")
+TestHelpers.Assert(
+	not Object:HasEffect(Humanoid, FirstName),
+	"Expected terminating unregister to remove active effects"
+)
+TestHelpers.AssertEqual(Object:UnregisterEffect(FirstName, false), false, "Expected repeated unregister to fail.")
 
-Helpers.AssertEqual(Manager:ClearEffect(Humanoid, "removeAll"), true, "Expected removeAll to clear remaining effects")
-Helpers.WaitForCleanup(Manager, Humanoid)
+TestHelpers.AssertEqual(
+	Object:ClearEffect(Humanoid, "removeAll"),
+	true,
+	"Expected removeAll to clear remaining effects."
+)
+TestHelpers.WaitForCleanup(Object, Humanoid)

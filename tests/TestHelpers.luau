@@ -1,41 +1,40 @@
-local StatusEffect = require(script.Parent.Parent.StatusEffect.StatusEffect)
-local Helpers = {}
+const Statusify = require("../Source/Api")
+const Types = require("../Source/Types")
 
-function Helpers.Assert(condition: boolean, message: string)
+local TestHelpers = {}
+
+function TestHelpers.Assert(condition: boolean, message: string)
 	if not condition then
 		error(message, 2)
 	end
 end
 
-function Helpers.AssertEqual(actual: any, expected: any, message: string)
-	Helpers.Assert(actual == expected, `{message} (expected {expected}, got {actual})`)
+function TestHelpers.AssertEqual<T, E>(actual: T, expected: E, message: string)
+	TestHelpers.Assert(actual == expected, `{message} (expected {expected}, got {actual}).`)
 end
 
-function Helpers.NewManager(maxNumberPerHumanoid: number?)
-	while StatusEffect.GetExistingObject() do
-		task.wait()
+function TestHelpers.NewObject(maxNumberPerHumanoid: number?)
+	while Statusify.GetExistingObject() do
+		task.wait() -- Keep waiting until GetExistingObject returns 'nil'
 	end
 
-	local remoteEvent = {
-		FireAllClients = function() end,
-	}
-
-	local manager = StatusEffect.New({
+	local manager = Statusify.New({
 		MaxNumberPerHumanoid = maxNumberPerHumanoid,
-		RemoteEvent = remoteEvent :: RemoteEvent,
+		RemoteEvent = Instance.new("RemoteEvent"), -- No need to parent, we don't need to see any replication
 	})
-	Helpers.Assert(manager ~= nil, "Expected the StatusEffect manager to be created")
-	return manager, remoteEvent
+
+	TestHelpers.Assert(manager ~= nil, "Expected the object to be created.")
+	return manager
 end
 
-function Helpers.NewHumanoid()
+function TestHelpers.NewHumanoid()
 	return Instance.new("Humanoid")
 end
 
-function Helpers.WaitForCleanup(manager: any, humanoid: Humanoid)
-	manager:Destroy()
-	Helpers.AssertEqual(StatusEffect.GetExistingObject(), nil, "Expected manager cleanup to release the singleton")
+function TestHelpers.WaitForCleanup(object: Types.StatusEffectExternal, humanoid: Humanoid)
+	(object :: any):Destroy()
+	TestHelpers.AssertEqual(Statusify.GetExistingObject(), nil, "Expected object cleanup to release the singleton")
 	humanoid:Destroy()
 end
 
-return table.freeze(Helpers)
+return table.freeze(TestHelpers)
