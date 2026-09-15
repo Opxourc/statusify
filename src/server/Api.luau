@@ -179,6 +179,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 		if definition.StackBehavior == "ignore" then
 		elseif definition.StackBehavior == "stack" then
 			Utilities.MutateStack(self, humanoid, existing, 1)
+			Utilities.RunOnUpdate(self, humanoid, effectName, existing, definition)
 		elseif definition.StackBehavior == "refresh" then
 			existing.ExpireTime = now + definition.Duration
 			Replication.Replicate({
@@ -188,6 +189,10 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 				Definition = definition,
 				Humanoid = humanoid,
 			})
+			Utilities.RunOnUpdate(self, humanoid, effectName, existing, definition)
+		else
+			Logger.Output("warn", `Unknown stack behavior provided. Got: ({definition.StackBehavior}).`)
+			return false
 		end
 
 		return true

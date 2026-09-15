@@ -24,6 +24,7 @@ export type EffectDefinition = {
 	OnApply: ((context: EffectContext) -> ())?, -- The moment an effect goes live
 	OnTick: ((context: EffectContext) -> ())?, -- When a interval strikes
 	OnRemove: ((context: EffectContext) -> ())?, -- The moment an effect is cleared
+	OnUpdate: ((context: EffectContext) -> ())?, -- When refreshes or stack values change
 }
 
 -- The contract for a live effect that is running

@@ -84,4 +84,26 @@ function Utilities.RemoveFromActive(self: Types.StatusEffectInternal, humanoid: 
 	return true
 end
 
+function Utilities.RunOnUpdate(
+	self: Types.StatusEffectInternal,
+	humanoid: Humanoid,
+	effectName: string,
+	effect: Types.EffectInstance,
+	definition: Types.EffectDefinition
+)
+	if definition.OnUpdate then
+		Threads.AddToActive(
+			self,
+			humanoid,
+			effectName,
+			task.spawn(function()
+				local ok, err = pcall(definition.OnUpdate, Utilities.CreateContext(humanoid, effect))
+				if not ok then
+					Logger.Output("error", `OnUpdate callback for "{effectName}" errored: ({err}).`)
+				end
+			end)
+		)
+	end
+end
+
 return table.freeze(Utilities)
