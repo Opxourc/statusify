@@ -16,13 +16,13 @@ export type StatusEffectInternal = Types.StatusEffectInternal
 
 local CurrentObject: StatusEffectExternal? = nil -- Represents the single object the StatusEffect
 
-local StatusEffect = {}
-StatusEffect.__index = StatusEffect
+local Api = {}
+Api.__index = Api
 
 --[[
 	Returns the currently existing object.
 ]]
-function StatusEffect.GetExistingObject()
+function Api.GetExistingObject()
 	return CurrentObject
 end
 
@@ -30,7 +30,7 @@ end
 	Constructs a new StatusEffect object.
 	Only one object can exist at a time and should be referenced by .GetExistingObject() instead.
 ]]
-function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectExternal?
+function Api.New(dependencies: ConstructorDependencies): StatusEffectExternal?
 	if CurrentObject then
 		Logger.Output(
 			"warn",
@@ -39,7 +39,7 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 		return nil
 	end
 
-	local self = setmetatable({}, StatusEffect)
+	local self = setmetatable({}, Api)
 
 	-- Connections to handle the active states of effects when a humanoid dies or if a player leaves and joins
 	self.WatcherConnections = Connections.CreateWatcher(self)
@@ -67,7 +67,7 @@ function StatusEffect.New(dependencies: ConstructorDependencies): StatusEffectEx
 	return self
 end
 
-function StatusEffect:Destroy()
+function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 	CurrentObject = nil
 
@@ -88,7 +88,7 @@ function StatusEffect:Destroy()
 	Logger.Output("log", "StatusEffect object destroyed.")
 end
 
-function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
+function Api:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
 
@@ -132,7 +132,7 @@ function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefin
 	return true
 end
 
-function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
+function Api:UnregisterEffect(effectName: string, terminate: boolean): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
 
@@ -156,7 +156,7 @@ function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): 
 	return true
 end
 
-function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
+function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
 
@@ -248,11 +248,7 @@ function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boole
 	return true
 end
 
-function StatusEffect:ClearEffect(
-	humanoid: Humanoid,
-	action: "remove" | "removeAll" | "decrement",
-	effectName: string?
-): boolean
+function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "decrement", effectName: string?): boolean
 	local self = Utilities.AnnotateSelf(self)
 
 	-- effectName is not guaranteed to exist
@@ -314,11 +310,11 @@ function StatusEffect:ClearEffect(
 	return true
 end
 
-function StatusEffect:GetRegisteredEffect(effectName: string): EffectDefinition?
+function Api:GetRegisteredEffect(effectName: string): EffectDefinition?
 	return Utilities.AnnotateSelf(self).RegisteredEffects[string.lower(effectName)]
 end
 
-function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
+function Api:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
 	local activeEffects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
 	if not activeEffects then
 		return nil
@@ -327,7 +323,7 @@ function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): E
 	return activeEffects[string.lower(effectName)]
 end
 
-function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
+function Api:HasEffect(humanoid: Humanoid, effectName: string): boolean
 	local effects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
 	if not effects then
 		return false
@@ -336,4 +332,4 @@ function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
 	return effects[string.lower(effectName)] ~= nil
 end
 
-return table.freeze(StatusEffect)
+return table.freeze(Api)

@@ -1,5 +1,5 @@
 {
-  "name": "rbx-status-effect",
+  "name": "statusify",
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": {
