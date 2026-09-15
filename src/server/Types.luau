@@ -117,6 +117,7 @@ export type StatusEffectInternal = StatusEffectExternal & {
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
+	ActiveThreads: { [Humanoid]: { [string]: { thread } } },
 }
 
 return table.freeze({})
