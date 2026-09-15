@@ -1,5 +1,3 @@
-const SharedTypes = require("@game/ReplicatedStorage/Shared/StatusEffect/Types")
-
 -- Dependencies that the constructor needs to have injected before it can work
 export type ConstructorDependencies = {
 	RemoteEvent: RemoteEvent,
@@ -64,26 +62,12 @@ export type StatusEffectExternal = {
 
 -- Private interface for the framework to work with
 export type StatusEffectInternal = StatusEffectExternal & {
-	JanitorConnections: { RBXScriptConnection },
+	WatcherConnections: { RBXScriptConnection },
 	RuntimeConnection: RBXScriptConnection,
 	MaxNumberPerHumanoid: number,
 	RemoteEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
-
-	_getSelf: (self: StatusEffectInternal) -> StatusEffectInternal,
-	_createRuntime: (self: StatusEffectInternal) -> RBXScriptConnection?,
-	_createContext: (self: StatusEffectInternal, humanoid: Humanoid, effect: EffectInstance) -> EffectContext,
-	_mutateStack: (self: StatusEffectInternal, humanoid: Humanoid, effect: EffectInstance, applyValue: number) -> (),
-	_createJanitor: (self: StatusEffectInternal) -> { RBXScriptConnection },
-	_removeFromActive: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
-	_sendReplication: (
-		self: StatusEffectInternal,
-		humanoid: Humanoid,
-		message: SharedTypes.EventMessage,
-		effectName: string,
-		definition: EffectDefinition
-	) -> boolean,
 }
 
 return table.freeze({})
