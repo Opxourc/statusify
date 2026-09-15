@@ -98,9 +98,12 @@ end
 
 	Note: Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
 	Lower intervals cause 'OnTick' to execute more frequently and can increase CPU usage. Consider using 0.5 or 1 second(s) for effects that only need periodic updates.
+
+	Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
 ]]
 function StatusEffect:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
 	local self = Utilities.AnnotateSelf(self)
+	effectName = string.lower(effectName)
 
 	if self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to register ({effectName}) when it's already registered.`)
@@ -148,6 +151,7 @@ end
 ]]
 function StatusEffect:UnregisterEffect(effectName: string, terminate: boolean): boolean
 	local self = Utilities.AnnotateSelf(self)
+	effectName = string.lower(effectName)
 
 	if not self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to unregister ({effectName}) when it wasn't registered.`)
@@ -174,6 +178,7 @@ end
 ]]
 function StatusEffect:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	local self = Utilities.AnnotateSelf(self)
+	effectName = string.lower(effectName)
 
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
@@ -270,6 +275,11 @@ function StatusEffect:ClearEffect(
 ): boolean
 	local self = Utilities.AnnotateSelf(self)
 
+	-- effectName is not guaranteed to exist
+	if effectName then
+		effectName = string.lower(effectName)
+	end
+
 	if (action == "remove" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
 		return false
@@ -322,7 +332,7 @@ end
 	Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
 ]]
 function StatusEffect:GetRegisteredEffect(effectName: string): EffectDefinition?
-	return Utilities.AnnotateSelf(self).RegisteredEffects[effectName]
+	return Utilities.AnnotateSelf(self).RegisteredEffects[string.lower(effectName)]
 end
 
 --[[
@@ -334,7 +344,7 @@ function StatusEffect:GetActiveEffect(humanoid: Humanoid, effectName: string): E
 		return nil
 	end
 
-	return activeEffects[effectName]
+	return activeEffects[string.lower(effectName)]
 end
 
 --[[
@@ -346,7 +356,7 @@ function StatusEffect:HasEffect(humanoid: Humanoid, effectName: string): boolean
 		return false
 	end
 
-	return effects[effectName] ~= nil
+	return effects[string.lower(effectName)] ~= nil
 end
 
 return table.freeze(StatusEffect)
