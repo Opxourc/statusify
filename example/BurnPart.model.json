@@ -1,0 +1,100 @@
+{
+    "ClassName": "Part",
+    "Properties": {
+        "Size": [
+            4,
+            6,
+            1
+        ],
+        "CanCollide": false,
+        "CanQuery": false,
+        "CanTouch": false,
+        "AudioCanCollide": false,
+        "Anchored": false,
+        "Massless": false,
+        "Transparency": 1
+    },
+    "Children": [
+        {
+            "Name": "Fire",
+            "ClassName": "ParticleEmitter",
+            "Properties": {
+                "Color": {
+                    "ColorSequence": {
+                        "keypoints": [
+                            {
+                                "time": 0,
+                                "color": [
+                                    1,
+                                    0.294,
+                                    0.196
+                                ]
+                            },
+                            {
+                                "time": 1,
+                                "color": [
+                                    1,
+                                    0.294,
+                                    0.196
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "LightEmission": 1,
+                "LightInfluence": 1,
+                "Size": {
+                    "NumberSequence": {
+                        "keypoints": [
+                            {
+                                "time": 0,
+                                "value": 1,
+                                "envelope": 0
+                            },
+                            {
+                                "time": 1,
+                                "value": 2.5,
+                                "envelope": 0
+                            }
+                        ]
+                    }
+                },
+                "Texture": "rbxassetid://15398107645",
+                "Transparency": {
+                    "NumberSequence": {
+                        "keypoints": [
+                            {
+                                "time": 0,
+                                "value": 1,
+                                "envelope": 0
+                            },
+                            {
+                                "time": 0.25,
+                                "value": 0,
+                                "envelope": 0
+                            },
+                            {
+                                "time": 1,
+                                "value": 1,
+                                "envelope": 0
+                            }
+                        ]
+                    }
+                },
+                "Rate": 10,
+                "Rotation": {
+                    "NumberRange": [
+                        1,
+                        360
+                    ]
+                },
+                "Speed": {
+                    "NumberRange": [
+                        0,
+                        0
+                    ]
+                }
+            }
+        }
+    ]
+}

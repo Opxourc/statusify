@@ -8,8 +8,8 @@
         "Tests": {
           "$path": "tests"
         },
-        "Example": {
-          "$path": "example"
+        "Demo": {
+          "$path": "example/Demo.server.luau"
         },
         "Source": {
           "$path": "src/server"
@@ -17,10 +17,39 @@
       }
     },
     "ReplicatedStorage": {
+      "Remotes": {
+        "$className": "Folder",
+        "Statusify": {
+          "$className": "Folder",
+          "DemoReplication": {
+            "$path": "example/DemoReplication.model.json"
+          }
+        }
+      },
+      "Assets": {
+        "$className": "Folder",
+        "Statusify": {
+          "$className": "Folder",
+          "BurnPart": {
+            "$path": "example/BurnPart.model.json"
+          }
+        }
+      },
       "Shared": {
         "$className": "Folder",
         "Statusify": {
           "$path": "src/shared"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Statusify": {
+          "$className": "Folder",
+          "Demo": {
+            "$path": "example/Demo.client.luau"
+          }
         }
       }
     }
