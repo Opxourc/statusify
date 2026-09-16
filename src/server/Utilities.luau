@@ -17,12 +17,17 @@ function Utilities.CreateContext(humanoid: Humanoid, effect: Types.EffectInstanc
 	}
 end
 
-function Utilities.MutateStack(
-	self: Types.StatusEffectInternal,
-	humanoid: Humanoid,
-	effect: Types.EffectInstance,
-	applyValue: number
-)
+function Utilities.MutateStack(args: {
+	Self: Types.StatusEffectInternal,
+	Effect: Types.EffectInstance,
+	Humanoid: Humanoid,
+	ApplyValue: number,
+})
+	local self = args.Self
+	local effect = args.Effect
+	local humanoid = args.Humanoid
+	local applyValue = args.ApplyValue
+
 	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
 	Replication.Replicate({
 		Self = self,

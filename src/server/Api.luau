@@ -188,7 +188,12 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 
 		if definition.StackBehavior == "ignore" then
 		elseif definition.StackBehavior == "stack" then
-			Utilities.MutateStack(self, humanoid, existing, 1)
+			Utilities.MutateStack({
+				Self = self,
+				Humanoid = humanoid,
+				Effect = existing,
+				ApplyValue = 1,
+			})
 			Utilities.RunOnUpdate({
 				Self = self,
 				Effect = existing,
@@ -311,7 +316,12 @@ function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "d
 		end
 
 		local previous = effect.Stacks
-		Utilities.MutateStack(self, humanoid, effect, -1)
+		Utilities.MutateStack({
+			Self = self,
+			Humanoid = humanoid,
+			Effect = effect,
+			ApplyValue = -1,
+		})
 		local subsequent = effect.Stacks
 
 		if effect.Stacks == 0 then
