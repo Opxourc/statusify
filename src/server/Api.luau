@@ -102,39 +102,44 @@ function Api:RegisterEffect(args: {
 		return false
 	end
 
-	definition.Duration = definition.Duration or Defaults.ED_Defaults.Duration
-	definition.Interval = definition.Interval or Defaults.ED_Defaults.Interval
-	definition.Throttle = definition.Throttle or Defaults.ED_Defaults.Throttle
-	definition.MaxStacks = definition.MaxStacks or Defaults.ED_Defaults.MaxStacks
-	definition.StackBehavior = definition.StackBehavior or Defaults.ED_Defaults.StackBehavior
+	-- Don't mutate the provided table definition directly
+	-- That behavior is not intended for this function method
+	local normalized = table.clone(definition)
+	normalized.Duration = normalized.Duration or Defaults.ED_Defaults.Duration
+	normalized.Interval = normalized.Interval or Defaults.ED_Defaults.Interval
+	normalized.Throttle = normalized.Throttle or Defaults.ED_Defaults.Throttle
+	normalized.MaxStacks = normalized.MaxStacks or Defaults.ED_Defaults.MaxStacks
+	normalized.StackBehavior = normalized.StackBehavior or Defaults.ED_Defaults.StackBehavior
 
-	if not definition.Replicate then
-		definition.Replicate = {
+	if not normalized.Replicate then
+		normalized.Replicate = {
 			Apply = Defaults.ED_Defaults.Replicate.Apply,
 			Tick = Defaults.ED_Defaults.Replicate.Tick,
 			Remove = Defaults.ED_Defaults.Replicate.Remove,
 		}
 	else
-		definition.Replicate = {
-			Apply = if definition.Replicate.Apply == nil
+		-- These values can actually be false
+		-- Use a nil check instead of the 'or' inline
+		normalized.Replicate = {
+			Apply = if normalized.Replicate.Apply == nil
 				then Defaults.ED_Defaults.Replicate.Apply
-				else definition.Replicate.Apply,
+				else normalized.Replicate.Apply,
 
-			Tick = if definition.Replicate.Tick == nil
+			Tick = if normalized.Replicate.Tick == nil
 				then Defaults.ED_Defaults.Replicate.Tick
-				else definition.Replicate.Tick,
+				else normalized.Replicate.Tick,
 
-			Remove = if definition.Replicate.Remove == nil
+			Remove = if normalized.Replicate.Remove == nil
 				then Defaults.ED_Defaults.Replicate.Remove
-				else definition.Replicate.Remove,
+				else normalized.Replicate.Remove,
 
-			Update = if definition.Replicate.Update == nil
+			Update = if normalized.Replicate.Update == nil
 				then Defaults.ED_Defaults.Replicate.Update
-				else definition.Replicate.Update,
+				else normalized.Replicate.Update,
 		}
 	end
 
-	self.RegisteredEffects[effectName] = definition
+	self.RegisteredEffects[effectName] = normalized
 	return true
 end
 
