@@ -131,7 +131,7 @@ A working demo is included under the `example` folder and the test scripts under
 
 ## License
 
-This project is for Roblox game development and is intended to be customized for your own game use.
+This project is licensed under the [MIT License](LICENSE).
 
 ## Contributing
 
