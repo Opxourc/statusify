@@ -38,7 +38,15 @@ function Utilities.MutateStack(args: {
 	})
 end
 
-function Utilities.RemoveFromActive(self: Types.StatusEffectInternal, humanoid: Humanoid, effectName: string)
+function Utilities.RemoveFromActive(args: {
+	Self: Types.StatusEffectInternal,
+	Humanoid: Humanoid,
+	EffectName: string,
+})
+	local self = args.Self
+	local humanoid = args.Humanoid
+	local effectName = args.EffectName
+
 	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
 		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects to remove.`)

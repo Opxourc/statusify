@@ -23,7 +23,11 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 		for humanoid, activeEffects in self.ActiveEffects do
 			for effectName, effect in activeEffects do
 				if now >= effect.ExpireTime then
-					Utilities.RemoveFromActive(self, humanoid, effectName)
+					Utilities.RemoveFromActive({
+						Self = self,
+						Humanoid = humanoid,
+						EffectName = effectName,
+					})
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
 

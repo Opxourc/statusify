@@ -81,7 +81,11 @@ function Api:Destroy()
 
 	for humanoid, effects in self.ActiveEffects do
 		for effectName in effects do
-			Utilities.RemoveFromActive(self, humanoid, effectName)
+			Utilities.RemoveFromActive({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effectName,
+			})
 		end
 	end
 
@@ -149,7 +153,11 @@ function Api:UnregisterEffect(effectName: string, terminate: boolean): boolean
 			if not activeEffects[effectName] then
 				continue
 			end
-			Utilities.RemoveFromActive(self, humanoid, effectName)
+			Utilities.RemoveFromActive({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effectName,
+			})
 			Threads.CancelAllFromActive(self, humanoid, "cancelEffect", effectName) -- Cancel all running threads for this effect
 		end
 	end
@@ -286,7 +294,11 @@ function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "d
 	end
 
 	if action == "remove" then
-		Utilities.RemoveFromActive(self, humanoid, effectName :: string)
+		Utilities.RemoveFromActive({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+		})
 		Logger.Output("log", `Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
 	elseif action == "removeAll" then
 		local activeEffects = self.ActiveEffects[humanoid]
@@ -295,8 +307,12 @@ function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "d
 			return false
 		end
 
-		for name in activeEffects do
-			Utilities.RemoveFromActive(self, humanoid, name)
+		for effectName in activeEffects do
+			Utilities.RemoveFromActive({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effectName,
+			})
 		end
 		Logger.Output("log", `Removed all status effects from ({humanoid:GetFullName()}).`)
 	elseif action == "decrement" then
@@ -325,7 +341,11 @@ function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "d
 		local subsequent = effect.Stacks
 
 		if effect.Stacks == 0 then
-			Utilities.RemoveFromActive(self, humanoid, effectName :: string)
+			Utilities.RemoveFromActive({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effectName,
+			})
 		end
 		Logger.Output(
 			"log",
