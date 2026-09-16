@@ -7,8 +7,8 @@ const WEAK_METATABLE = { __mode = "k" }
 function Threads.AddToActive(self: Types.StatusEffectInternal, humanoid: Humanoid, effectName: string, thread: thread)
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects that can take threads.`)
-		return
+		activeThreads = {}
+		self.ActiveThreads[humanoid] = activeThreads
 	end
 
 	-- Create a new table if one doesn't already exist

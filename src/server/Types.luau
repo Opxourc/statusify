@@ -14,6 +14,7 @@ export type EffectDefinition = {
 		Remove: boolean?,
 		Update: boolean?,
 	}?,
+	Throttle: number?, -- The minimal time between applications
 	MaxStacks: number?,
 	StackBehavior: "refresh" | "stack" | "ignore"?,
 	-- refresh - Reset duration
@@ -35,6 +36,7 @@ export type EffectInstance = {
 	StartTime: number,
 	ExpireTime: number,
 	NextTickTime: number,
+	NextAvaliableApplyTime: number,
 }
 
 -- The context of the running effect at a given state.

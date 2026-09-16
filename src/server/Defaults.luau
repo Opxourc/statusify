@@ -6,6 +6,7 @@ Defaults.ED_Defaults = table.freeze({
 	Interval = 1,
 	MaxStacks = math.huge,
 	StackBehavior = "refresh",
+	Throttle = 0.25,
 	Replicate = {
 		Apply = true,
 		Tick = true,

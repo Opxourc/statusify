@@ -99,6 +99,7 @@ function Api:RegisterEffect(effectName: string, definition: EffectDefinition): b
 
 	definition.Duration = definition.Duration or Defaults.ED_Defaults.Duration
 	definition.Interval = definition.Interval or Defaults.ED_Defaults.Interval
+	definition.Throttle = definition.Throttle or Defaults.ED_Defaults.Throttle
 	definition.MaxStacks = definition.MaxStacks or Defaults.ED_Defaults.MaxStacks
 	definition.StackBehavior = definition.StackBehavior or Defaults.ED_Defaults.StackBehavior
 
@@ -176,6 +177,15 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	-- If the effect already exists, check the StackBehavior to decide what to do
 	local existing = activeEffects[effectName]
 	if existing then
+		if now < existing.NextAvaliableApplyTime then
+			Logger.Output(
+				"warn",
+				`({effectName}) for ({humanoid:GetFullName()}) was throttled. No reapplication was ran.`
+			)
+			return false
+		end
+		existing.NextAvaliableApplyTime = now + definition.Throttle
+
 		if definition.StackBehavior == "ignore" then
 		elseif definition.StackBehavior == "stack" then
 			Utilities.MutateStack(self, humanoid, existing, 1)
@@ -217,6 +227,7 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 		Definition = definition,
 		StartTime = now,
 		Stacks = 1,
+		NextAvaliableApplyTime = now + definition.Throttle,
 		ExpireTime = now + (definition.Duration :: number),
 		NextTickTime = now + (definition.Interval :: number),
 	}
