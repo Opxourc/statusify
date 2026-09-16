@@ -93,6 +93,19 @@
                         0,
                         0
                     ]
+                },
+                "FlipbookLayout": "Grid4x4",
+                "FlipbookFramerate": {
+                    "NumberRange": [
+                        30.0,
+                        30.0
+                    ]
+                },
+                "Lifetime": {
+                    "NumberRange": [
+                        2,
+                        3
+                    ]
                 }
             }
         }
