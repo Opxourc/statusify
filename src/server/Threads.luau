@@ -32,12 +32,17 @@ function Threads.AddToActive(args: {
 	Logger.Output("log", `Added a thread for ({effectName}) by ({humanoid:GetFullName()}).`)
 end
 
-function Threads.CancelAllFromActive(
-	self: Types.StatusEffectInternal,
-	humanoid: Humanoid,
-	action: "cancelEffect" | "cancelAll",
-	effectName: string?
-)
+function Threads.CancelAllFromActive(args: {
+	Action: "cancelEffect" | "cancelAll",
+	Self: Types.StatusEffectInternal,
+	Humanoid: Humanoid,
+	EffectName: string?,
+})
+	local effectName = args.EffectName
+	local humanoid = args.Humanoid
+	local action = args.Action
+	local self = args.Self
+
 	if action == "cancelEffect" and not effectName then
 		Logger.Output(
 			"warn",

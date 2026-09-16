@@ -158,7 +158,12 @@ function Api:UnregisterEffect(effectName: string, terminate: boolean): boolean
 				Humanoid = humanoid,
 				EffectName = effectName,
 			})
-			Threads.CancelAllFromActive(self, humanoid, "cancelEffect", effectName) -- Cancel all running threads for this effect
+			Threads.CancelAllFromActive({
+				Self = self,
+				Humanoid = humanoid,
+				Action = "cancelEffect",
+				EffectName = effectName,
+			})
 		end
 	end
 
