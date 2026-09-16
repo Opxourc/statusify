@@ -131,4 +131,8 @@ function Utilities.RunOnUpdate(args: {
 	end
 end
 
+function Utilities.NormalizeEffectName(effectName: string): string
+	return string.lower(effectName)
+end
+
 return table.freeze(Utilities)

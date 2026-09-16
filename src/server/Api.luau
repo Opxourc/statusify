@@ -95,7 +95,7 @@ function Api:RegisterEffect(args: {
 	Definition: Types.EffectDefinition,
 }): boolean
 	local self = Utilities.AnnotateSelf(self)
-	local effectName = string.lower(args.EffectName)
+	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local definition = args.Definition
 
 	if self.RegisteredEffects[effectName] then
@@ -149,7 +149,7 @@ function Api:UnregisterEffect(args: {
 	Terminate: boolean,
 }): boolean
 	local self = Utilities.AnnotateSelf(self)
-	local effectName = string.lower(args.EffectName)
+	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local terminate = args.Terminate
 
 	if not self.RegisteredEffects[effectName] then
@@ -186,7 +186,7 @@ function Api:ApplyEffect(args: {
 	EffectName: string,
 }): boolean
 	local self = Utilities.AnnotateSelf(self)
-	local effectName = string.lower(args.EffectName)
+	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local humanoid = args.Humanoid
 
 	local definition = self.RegisteredEffects[effectName]
@@ -311,7 +311,7 @@ function Api:ClearEffect(args: {
 	local self = Utilities.AnnotateSelf(self)
 	local humanoid = args.Humanoid
 	local action = args.Action
-	local effectName = args.EffectName and string.lower(args.EffectName) or nil
+	local effectName = args.EffectName and Utilities.NormalizeEffectName(args.EffectName) or nil
 
 	if (action == "remove" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
@@ -386,7 +386,7 @@ end
 
 function Api:GetRegisteredEffect(effectName: string): Types.EffectDefinition?
 	local self = Utilities.AnnotateSelf(self)
-	effectName = string.lower(effectName)
+	effectName = Utilities.NormalizeEffectName(effectName)
 	return self.RegisteredEffects[effectName]
 end
 
@@ -396,7 +396,7 @@ function Api:GetActiveEffect(args: {
 }): Types.EffectInstance?
 	local self = Utilities.AnnotateSelf(self)
 	local humanoid = args.Humanoid
-	local effectName = string.lower(args.EffectName)
+	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 
 	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
@@ -412,7 +412,7 @@ function Api:HasEffect(args: {
 }): boolean
 	local self = Utilities.AnnotateSelf(self)
 	local humanoid = args.Humanoid
-	local effectName = string.lower(args.EffectName)
+	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 
 	local effects = self.ActiveEffects[humanoid]
 	if not effects then
