@@ -60,7 +60,7 @@ function Api.New(args: {
 		return nil
 	end
 
-	self.MaxNumberPerHumanoid = maxEffectsPerHumanoid or Defaults.CD_DefaultMaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
+	self.MaxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.CD_DefaultMaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
 	self.ReplicationEvent = replicationEvent -- This will be used to send replication events to clients
 	self.RegisteredEffects = {} -- These are effects that are considered valid
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
@@ -97,9 +97,13 @@ function Api:Destroy()
 	Logger.Output("log", "Object destroyed.")
 end
 
-function Api:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
+function Api:RegisterEffect(args: {
+	EffectName: string,
+	Definition: EffectDefinition,
+}): boolean
 	local self = Utilities.AnnotateSelf(self)
-	effectName = string.lower(effectName)
+	local effectName = string.lower(args.EffectName)
+	local definition = args.Definition
 
 	if self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to register ({effectName}) when it's already registered.`)
@@ -142,9 +146,13 @@ function Api:RegisterEffect(effectName: string, definition: EffectDefinition): b
 	return true
 end
 
-function Api:UnregisterEffect(effectName: string, terminate: boolean): boolean
+function Api:UnregisterEffect(args: {
+	EffectName: string,
+	Terminate: boolean,
+}): boolean
 	local self = Utilities.AnnotateSelf(self)
-	effectName = string.lower(effectName)
+	local effectName = string.lower(args.EffectName)
+	local terminate = args.Terminate
 
 	if not self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to unregister ({effectName}) when it wasn't registered.`)
@@ -175,9 +183,13 @@ function Api:UnregisterEffect(effectName: string, terminate: boolean): boolean
 	return true
 end
 
-function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
+function Api:ApplyEffect(args: {
+	Humanoid: Humanoid,
+	EffectName: string,
+}): boolean
 	local self = Utilities.AnnotateSelf(self)
-	effectName = string.lower(effectName)
+	local effectName = string.lower(args.EffectName)
+	local humanoid = args.Humanoid
 
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
@@ -245,10 +257,10 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	end
 
 	-- The number of stacks cannot go higher than the max allowment
-	if currentCount >= self.MaxNumberPerHumanoid then
+	if currentCount >= self.MaxEffectsPerHumanoid then
 		Logger.Output(
 			"warn",
-			`Attempted to apply ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxNumberPerHumanoid}).`
+			`Attempted to apply ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxEffectsPerHumanoid}).`
 		)
 		return false
 	end
@@ -290,13 +302,15 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 	return true
 end
 
-function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "decrement", effectName: string?): boolean
+function Api:ClearEffect(args: {
+	Action: "remove" | "removeAll" | "decrement",
+	EffectName: string?,
+	Humanoid: Humanoid,
+}): boolean
 	local self = Utilities.AnnotateSelf(self)
-
-	-- effectName is not guaranteed to exist
-	if effectName then
-		effectName = string.lower(effectName)
-	end
+	local humanoid = args.Humanoid
+	local action = args.Action
+	local effectName = args.EffectName and string.lower(args.EffectName) or nil
 
 	if (action == "remove" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
@@ -370,25 +384,41 @@ function Api:ClearEffect(humanoid: Humanoid, action: "remove" | "removeAll" | "d
 end
 
 function Api:GetRegisteredEffect(effectName: string): EffectDefinition?
-	return Utilities.AnnotateSelf(self).RegisteredEffects[string.lower(effectName)]
+	local self = Utilities.AnnotateSelf(self)
+	effectName = string.lower(effectName)
+	return self.RegisteredEffects[effectName]
 end
 
-function Api:GetActiveEffect(humanoid: Humanoid, effectName: string): EffectInstance?
-	local activeEffects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
+function Api:GetActiveEffect(args: {
+	Humanoid: Humanoid,
+	EffectName: string,
+}): EffectInstance?
+	local self = Utilities.AnnotateSelf(self)
+	local humanoid = args.Humanoid
+	local effectName = string.lower(args.EffectName)
+
+	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
 		return nil
 	end
 
-	return activeEffects[string.lower(effectName)]
+	return activeEffects[effectName]
 end
 
-function Api:HasEffect(humanoid: Humanoid, effectName: string): boolean
-	local effects = Utilities.AnnotateSelf(self).ActiveEffects[humanoid]
+function Api:HasEffect(args: {
+	Humanoid: Humanoid,
+	EffectName: string,
+}): boolean
+	local self = Utilities.AnnotateSelf(self)
+	local humanoid = args.Humanoid
+	local effectName = string.lower(args.EffectName)
+
+	local effects = self.ActiveEffects[humanoid]
 	if not effects then
 		return false
 	end
 
-	return effects[string.lower(effectName)] ~= nil
+	return effects[effectName] ~= nil
 end
 
 return table.freeze(Api)

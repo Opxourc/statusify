@@ -12,42 +12,44 @@ const RemoteEvent = game:GetService("ReplicatedStorage")
 	:WaitForChild("DemoReplication")
 const SharedNames = require("@game/ReplicatedStorage/Shared/Statusify/Names")
 const Statusify = require("./Source/Api")
-const MaxNumberPerHumanoid = 5 -- Max number of effects per humanoid will be 5
 
 -- Construct the object
 local Object = Statusify.New({
-	MaxNumberPerHumanoid = MaxNumberPerHumanoid,
-	RemoteEvent = RemoteEvent,
+	MaxNumberPerHumanoid = 5,
+	ReplicationEvent = RemoteEvent,
 })
 
 -- Register the desired effect and provide a definition
 const BaseDamage = 5
-Object:RegisterEffect(SharedNames.Burn, {
-	Duration = 10,
-	Interval = 1,
-	MaxStacks = 3,
-	StackBehavior = "refresh",
+Object:RegisterEffect({
+	EffectName = SharedNames.Burn,
+	Definition = {
+		Duration = 10,
+		Interval = 1,
+		MaxStacks = 3,
+		StackBehavior = "refresh",
 
-	-- Use the context that's given to know more about the effect
-	OnApply = function(context)
-		context.Target:TakeDamage(BaseDamage)
-	end,
+		-- Use the context that's given to know more about the effect
+		OnApply = function(context)
+			context.Target:TakeDamage(BaseDamage)
+		end,
 
-	OnTick = function(context)
-		context.Target:TakeDamage(BaseDamage * context.Stacks) -- Here we multiply the damage based on number of stacks
-	end,
+		OnTick = function(context)
+			context.Target:TakeDamage(BaseDamage * context.Stacks) -- Here we multiply the damage based on number of stacks
+		end,
 
-	-- OnRemove is not needed as we don't wanna do anything when this effect is removed.
-	-- OnUpdate is not needed because we don't want to do anything if reapplication happens or stack count changes
+		-- OnRemove is not needed as we don't wanna do anything when this effect is removed.
+		-- OnUpdate is not needed because we don't want to do anything if reapplication happens or stack count changes
 
-	-- Even though those callbacks are voided, we can use the Replicate key to determine whether we want to still replicate effects to the client
-	Replicate = {
-		Apply = true,
-		Tick = false,
+		-- Even though those callbacks are voided, we can use the Replicate key to determine whether we want to still replicate effects to the client
+		Replicate = {
+			Apply = true,
+			Tick = false,
 
-		-- Even though OnRemove and OnUpdate are nil, we still will replicate to the client for them
-		Remove = true,
-		Update = true,
+			-- Even though OnRemove and OnUpdate are nil, we still will replicate to the client for them
+			Remove = true,
+			Update = true,
+		},
 	},
 })
 
@@ -57,9 +59,15 @@ task.wait(3) -- Player may or may not be fully loaded in
 local FirstPlayer = game:GetService("Players"):GetPlayers()[1]
 local Humanoid = FirstPlayer.Character and FirstPlayer.Character:WaitForChild("Humanoid")
 if Humanoid and Humanoid:IsA("Humanoid") then
-	Object:ApplyEffect(Humanoid, SharedNames.Burn) -- One stack
+	Object:ApplyEffect({
+		EffectName = SharedNames.Burn,
+		Humanoid = Humanoid,
+	}) -- One stack
 	task.wait(5)
-	Object:ApplyEffect(Humanoid, SharedNames.Burn) -- Two stacks
+	Object:ApplyEffect({
+		Humanoid = Humanoid,
+		EffectName = SharedNames.Burn,
+	}) -- Two stacks
 
 	-- Because Burn is already applied, on the second application an 'update' replication/callback will be used instead
 end

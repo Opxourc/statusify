@@ -45,12 +45,21 @@ export type StatusEffectExternal = {
 	--[[
 		Returns whether a humanoid currently has the given effect active.
 	]]
-	HasEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
+	HasEffect: (self: StatusEffectInternal, args: {
+		Humanoid: Humanoid,
+		EffectName: string,
+	}) -> boolean,
 
 	--[[
 		Returns the active EffectInstance for a humanoid, or nil if it isn't active.
 	]]
-	GetActiveEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> EffectInstance?,
+	GetActiveEffect: (
+		self: StatusEffectInternal,
+		args: {
+			Humanoid: Humanoid,
+			EffectName: string,
+		}
+	) -> EffectInstance?,
 
 	--[[
 		Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
@@ -69,22 +78,33 @@ export type StatusEffectExternal = {
 	]]
 	ClearEffect: (
 		self: StatusEffectInternal,
-		humanoid: Humanoid,
-		action: "remove" | "removeAll" | "decrement",
-		effectName: string?
+		args: {
+			Action: "remove" | "removeAll" | "decrement",
+			Humanoid: Humanoid,
+			EffectName: string?,
+		}
 	) -> boolean,
 
 	--[[
 		Apply an effect status onto a humanoid.
 		This effect status should be registered first before any application of it can be used!
 	]]
-	ApplyEffect: (self: StatusEffectInternal, humanoid: Humanoid, effectName: string) -> boolean,
+	ApplyEffect: (self: StatusEffectInternal, args: {
+		Humanoid: Humanoid,
+		EffectName: string,
+	}) -> boolean,
 
 	--[[
 		Unregister an effect status that will no longer be used.
 		Use 'terminate' to destroy all active instances of the effect instantly.
 	]]
-	UnregisterEffect: (self: StatusEffectInternal, effectName: string, terminate: boolean) -> boolean,
+	UnregisterEffect: (
+		self: StatusEffectInternal,
+		args: {
+			EffectName: string,
+			Terminate: boolean,
+		}
+	) -> boolean,
 
 	--[[
 		Register an effect status to be available for use.
@@ -98,7 +118,13 @@ export type StatusEffectExternal = {
 
 		Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
 	]]
-	RegisterEffect: (self: StatusEffectInternal, effectName: string, definition: EffectDefinition) -> boolean,
+	RegisterEffect: (
+		self: StatusEffectInternal,
+		args: {
+			EffectName: string,
+			Definition: EffectDefinition,
+		}
+	) -> boolean,
 
 	--[[
 		Destroys the object, releasing everything it owns.
@@ -110,7 +136,7 @@ export type StatusEffectExternal = {
 export type StatusEffectInternal = StatusEffectExternal & {
 	WatcherConnections: { [RBXScriptConnection]: true },
 	RuntimeConnection: RBXScriptConnection,
-	MaxNumberPerHumanoid: number,
+	MaxEffectsPerHumanoid: number,
 	ReplicationEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },

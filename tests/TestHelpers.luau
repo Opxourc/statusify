@@ -13,14 +13,14 @@ function TestHelpers.AssertEqual<T, E>(actual: T, expected: E, message: string)
 	TestHelpers.Assert(actual == expected, `{message} (expected {expected}, got {actual}).`)
 end
 
-function TestHelpers.NewObject(maxNumberPerHumanoid: number?)
+function TestHelpers.NewObject(maxEffectsPerHumanoid: number?)
 	while Statusify.GetExistingObject() do
 		task.wait() -- Keep waiting until GetExistingObject returns 'nil'
 	end
 
 	local manager = Statusify.New({
-		MaxNumberPerHumanoid = maxNumberPerHumanoid,
-		RemoteEvent = Instance.new("RemoteEvent"), -- No need to parent, we don't need to see any replication
+		MaxEffectsPerHumanoid = maxEffectsPerHumanoid,
+		ReplicationEvent = Instance.new("RemoteEvent"), -- No need to parent, we don't need to see any replication
 	})
 
 	TestHelpers.Assert(manager ~= nil, "Expected the object to be created.")

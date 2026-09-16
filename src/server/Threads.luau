@@ -53,7 +53,7 @@ function Threads.CancelAllFromActive(args: {
 
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects that can take threads.`)
+		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active threads to cancel.`)
 		return
 	end
 

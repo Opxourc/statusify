@@ -87,7 +87,10 @@ function Connections.CreateWatcher(self: Types.StatusEffectInternal): { [RBXScri
 
 		-- If the humanoid dies, remove all effects automatically
 		connections[humanoid.Died:Connect(function()
-			self:ClearEffect(humanoid, "removeAll")
+			self:ClearEffect({
+				Humanoid = humanoid,
+				Action = "removeAll",
+			})
 			Threads.CancelAllFromActive({
 				Self = self,
 				Humanoid = humanoid,
@@ -112,7 +115,10 @@ function Connections.CreateWatcher(self: Types.StatusEffectInternal): { [RBXScri
 	connections[Players.PlayerRemoving:Connect(function(player)
 		local humanoid = getHumanoid(player.Character, false)
 		if humanoid then
-			self:ClearEffect(humanoid, "removeAll")
+			self:ClearEffect({
+				Humanoid = humanoid,
+				Action = "removeAll",
+			})
 			Threads.CancelAllFromActive({
 				Self = self,
 				Humanoid = humanoid,
