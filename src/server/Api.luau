@@ -204,16 +204,16 @@ function Api:ApplyEffect(args: {
 	-- If the effect already exists, check the StackBehavior to decide what to do
 	local existing = activeEffects[effectName]
 	if existing then
-		if now < existing.NextAvaliableApplyTime then
+		if now < existing.NextAvailableApplyTime then
 			Logger.Output(
 				"warn",
 				`({effectName}) for ({humanoid:GetFullName()}) was throttled. No reapplication was ran.`
 			)
 			return false
 		end
-		existing.NextAvaliableApplyTime = now + definition.Throttle
 
 		if definition.StackBehavior == "ignore" then
+			-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
 		elseif definition.StackBehavior == "stack" then
 			Utilities.MutateStack({
 				Self = self,
@@ -245,6 +245,7 @@ function Api:ApplyEffect(args: {
 			return false
 		end
 
+		existing.NextAvailableApplyTime = now + definition.Throttle -- Mutate after stack behavior is verified
 		return true
 	end
 
@@ -267,7 +268,7 @@ function Api:ApplyEffect(args: {
 		Definition = definition,
 		StartTime = now,
 		Stacks = 1,
-		NextAvaliableApplyTime = now + definition.Throttle,
+		NextAvailableApplyTime = now + definition.Throttle,
 		ExpireTime = now + (definition.Duration :: number),
 		NextTickTime = now + (definition.Interval :: number),
 	}

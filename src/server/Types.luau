@@ -30,7 +30,7 @@ export type EffectInstance = {
 	StartTime: number,
 	ExpireTime: number,
 	NextTickTime: number,
-	NextAvaliableApplyTime: number,
+	NextAvailableApplyTime: number,
 }
 
 -- The context of the running effect at a given state.
