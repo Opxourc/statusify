@@ -84,13 +84,17 @@ function Utilities.RemoveFromActive(self: Types.StatusEffectInternal, humanoid: 
 	return true
 end
 
-function Utilities.RunOnUpdate(
-	self: Types.StatusEffectInternal,
-	humanoid: Humanoid,
-	effectName: string,
-	effect: Types.EffectInstance,
-	definition: Types.EffectDefinition
-)
+function Utilities.RunOnUpdate(args: {
+	Self: Types.StatusEffectInternal,
+	Effect: Types.EffectInstance,
+	Humanoid: Humanoid,
+})
+	local self = args.Self
+	local effect = args.Effect
+	local humanoid = args.Humanoid
+	local effectName = effect.Name
+	local definition = effect.Definition
+
 	if definition.OnUpdate then
 		Threads.AddToActive(
 			self,
