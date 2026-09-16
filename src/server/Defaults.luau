@@ -1,6 +1,6 @@
 local Defaults = {}
 
-Defaults.CD_DefaultMaxPerHumanoid = 3
+Defaults.CD_DefaultMaxEffectsPerHumanoid = 3
 Defaults.ED_Defaults = table.freeze({
 	Duration = 5,
 	Interval = 1,

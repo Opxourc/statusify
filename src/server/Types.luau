@@ -1,9 +1,3 @@
--- Dependencies that the constructor needs to have injected before it can work
-export type ConstructorDependencies = {
-	RemoteEvent: RemoteEvent,
-	MaxNumberPerHumanoid: number?,
-}
-
 -- Describes the template for an effect
 export type EffectDefinition = {
 	Duration: number?, -- How long 'one' stack should last naturally without any interuptions
@@ -117,7 +111,7 @@ export type StatusEffectInternal = StatusEffectExternal & {
 	WatcherConnections: { [RBXScriptConnection]: true },
 	RuntimeConnection: RBXScriptConnection,
 	MaxNumberPerHumanoid: number,
-	RemoteEvent: RemoteEvent,
+	ReplicationEvent: RemoteEvent,
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
 	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true } } },

@@ -62,7 +62,7 @@ function Replication.Replicate(args: {
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
 	}
-	self.RemoteEvent:FireAllClients(packet)
+	self.ReplicationEvent:FireAllClients(packet)
 	Logger.Output("log", `Sent {effectName} {message} replication event for ({humanoid:GetFullName()}).`)
 end
 

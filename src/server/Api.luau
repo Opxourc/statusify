@@ -7,14 +7,13 @@ const Connections = require("./Connections")
 const Replication = require("./Replication")
 
 -- Convenience exporting so you don't have to import 'Types.luau' constantly
-export type ConstructorDependencies = Types.ConstructorDependencies
 export type EffectDefinition = Types.EffectDefinition
 export type EffectInstance = Types.EffectInstance
 export type EffectContext = Types.EffectContext
 export type StatusEffectExternal = Types.StatusEffectExternal
 export type StatusEffectInternal = Types.StatusEffectInternal
 
-local CurrentObject: StatusEffectExternal? = nil -- Represents the single object the StatusEffect
+local CurrentObject: StatusEffectExternal? = nil -- Represents the single object
 
 local Api = {}
 Api.__index = Api
@@ -27,10 +26,13 @@ function Api.GetExistingObject()
 end
 
 --[[
-	Constructs a new StatusEffect object.
+	Constructs a new object.
 	Only one object can exist at a time and should be referenced by .GetExistingObject() instead.
 ]]
-function Api.New(dependencies: ConstructorDependencies): StatusEffectExternal?
+function Api.New(args: {
+	MaxEffectsPerHumanoid: number?,
+	ReplicationEvent: RemoteEvent,
+}): StatusEffectExternal?
 	if CurrentObject then
 		Logger.Output(
 			"warn",
@@ -38,6 +40,9 @@ function Api.New(dependencies: ConstructorDependencies): StatusEffectExternal?
 		)
 		return nil
 	end
+
+	local maxEffectsPerHumanoid = args.MaxEffectsPerHumanoid
+	local replicationEvent = args.ReplicationEvent
 
 	local self = setmetatable({}, Api)
 
@@ -51,17 +56,17 @@ function Api.New(dependencies: ConstructorDependencies): StatusEffectExternal?
 	-- Connection that runs the lifecycle of currently running effects
 	self.RuntimeConnection = Connections.CreateRuntime(self)
 	if self.RuntimeConnection == nil then
-		Logger.Output("warn", "Unable to create StatusEffect object due to runtime creation failure.")
+		Logger.Output("warn", "Unable to create object due to runtime creation failure.")
 		return nil
 	end
 
-	self.MaxNumberPerHumanoid = dependencies.MaxNumberPerHumanoid or Defaults.CD_DefaultMaxPerHumanoid -- The max number of effects a humanoid can take at a moment
-	self.RemoteEvent = dependencies.RemoteEvent -- This will be used to send replication events to clients
+	self.MaxNumberPerHumanoid = maxEffectsPerHumanoid or Defaults.CD_DefaultMaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
+	self.ReplicationEvent = replicationEvent -- This will be used to send replication events to clients
 	self.RegisteredEffects = {} -- These are effects that are considered valid
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
 
-	Logger.Output("log", "StatusEffect object created.")
+	Logger.Output("log", "Object created.")
 	CurrentObject = self
 
 	return self
@@ -89,7 +94,7 @@ function Api:Destroy()
 		end
 	end
 
-	Logger.Output("log", "StatusEffect object destroyed.")
+	Logger.Output("log", "Object destroyed.")
 end
 
 function Api:RegisterEffect(effectName: string, definition: EffectDefinition): boolean
