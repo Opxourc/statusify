@@ -9,7 +9,7 @@ const Types = require("./Types")
 
 local Connections = {}
 
-function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptConnection?
+function Connections.CreateRuntime(self: Types.StatusifyInternal): RBXScriptConnection?
 	if self.RuntimeConnection ~= nil then
 		Logger.Output("warn", "Attempted to create a new runtime connection while one already exists.")
 		return nil
@@ -60,7 +60,7 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 	end)
 end
 
-function Connections.CreateWatcher(self: Types.StatusEffectInternal): { [RBXScriptConnection]: true }
+function Connections.CreateWatcher(self: Types.StatusifyInternal): { [RBXScriptConnection]: true }
 	if self.WatcherConnections ~= nil and next(self.WatcherConnections) ~= nil then
 		Logger.Output("warn", "Attempted to create new watcher connections when they already exist.")
 		return {}

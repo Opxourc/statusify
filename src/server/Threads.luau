@@ -5,7 +5,7 @@ local Threads = {}
 const WEAK_METATABLE = { __mode = "k" }
 
 function Threads.AddToActive(args: {
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string,
 	Thread: thread,
@@ -34,7 +34,7 @@ end
 
 function Threads.CancelAllFromActive(args: {
 	Action: "cancelEffect" | "cancelAll",
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string?,
 })

@@ -7,7 +7,7 @@ local Replication = {}
 function Replication.Replicate(args: {
 	Definition: Types.EffectDefinition,
 	Message: SharedTypes.EventMessage,
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string,
 })

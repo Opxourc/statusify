@@ -41,11 +41,11 @@ export type EffectContext = {
 }
 
 -- Public interface for scripts trying to use the framework
-export type StatusEffectExternal = {
+export type Statusify = {
 	--[[
 		Returns whether a humanoid currently has the given effect active.
 	]]
-	HasEffect: (self: StatusEffectInternal, args: {
+	HasEffect: (self: StatusifyInternal, args: {
 		Humanoid: Humanoid,
 		EffectName: string,
 	}) -> boolean,
@@ -54,7 +54,7 @@ export type StatusEffectExternal = {
 		Returns the active EffectInstance for a humanoid, or nil if it isn't active.
 	]]
 	GetActiveEffect: (
-		self: StatusEffectInternal,
+		self: StatusifyInternal,
 		args: {
 			Humanoid: Humanoid,
 			EffectName: string,
@@ -64,7 +64,7 @@ export type StatusEffectExternal = {
 	--[[
 		Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
 	]]
-	GetRegisteredEffect: (self: StatusEffectInternal, effectName: string) -> EffectDefinition?,
+	GetRegisteredEffect: (self: StatusifyInternal, effectName: string) -> EffectDefinition?,
 
 	--[[
 		Remove an effect status from a humanoid.
@@ -77,7 +77,7 @@ export type StatusEffectExternal = {
 		If the action is either "remove" or "decrement" you must specify the effectName.
 	]]
 	ClearEffect: (
-		self: StatusEffectInternal,
+		self: StatusifyInternal,
 		args: {
 			Action: "remove" | "removeAll" | "decrement",
 			Humanoid: Humanoid,
@@ -89,7 +89,7 @@ export type StatusEffectExternal = {
 		Apply an effect status onto a humanoid.
 		This effect status should be registered first before any application of it can be used!
 	]]
-	ApplyEffect: (self: StatusEffectInternal, args: {
+	ApplyEffect: (self: StatusifyInternal, args: {
 		Humanoid: Humanoid,
 		EffectName: string,
 	}) -> boolean,
@@ -99,7 +99,7 @@ export type StatusEffectExternal = {
 		Use 'terminate' to destroy all active instances of the effect instantly.
 	]]
 	UnregisterEffect: (
-		self: StatusEffectInternal,
+		self: StatusifyInternal,
 		args: {
 			EffectName: string,
 			Terminate: boolean,
@@ -119,7 +119,7 @@ export type StatusEffectExternal = {
 		Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
 	]]
 	RegisterEffect: (
-		self: StatusEffectInternal,
+		self: StatusifyInternal,
 		args: {
 			EffectName: string,
 			Definition: EffectDefinition,
@@ -129,11 +129,11 @@ export type StatusEffectExternal = {
 	--[[
 		Destroys the object, releasing everything it owns.
 	]]
-	Destroy: (self: StatusEffectInternal) -> (),
+	Destroy: (self: StatusifyInternal) -> (),
 }
 
 -- Private interface for the framework to work with
-export type StatusEffectInternal = StatusEffectExternal & {
+export type StatusifyInternal = Statusify & {
 	WatcherConnections: { [RBXScriptConnection]: true },
 	RuntimeConnection: RBXScriptConnection,
 	MaxEffectsPerHumanoid: number,

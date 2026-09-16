@@ -6,15 +6,7 @@ const Utilities = require("./Utilities")
 const Connections = require("./Connections")
 const Replication = require("./Replication")
 
--- Convenience exporting so you don't have to import 'Types.luau' constantly
-export type EffectDefinition = Types.EffectDefinition
-export type EffectInstance = Types.EffectInstance
-export type EffectContext = Types.EffectContext
-export type StatusEffectExternal = Types.StatusEffectExternal
-export type StatusEffectInternal = Types.StatusEffectInternal
-
-local CurrentObject: StatusEffectExternal? = nil -- Represents the single object
-
+local CurrentObject: Types.Statusify? = nil -- Represents the single object
 local Api = {}
 Api.__index = Api
 
@@ -32,7 +24,7 @@ end
 function Api.New(args: {
 	MaxEffectsPerHumanoid: number?,
 	ReplicationEvent: RemoteEvent,
-}): StatusEffectExternal?
+}): Types.Statusify?
 	if CurrentObject then
 		Logger.Output(
 			"warn",
@@ -99,7 +91,7 @@ end
 
 function Api:RegisterEffect(args: {
 	EffectName: string,
-	Definition: EffectDefinition,
+	Definition: Types.EffectDefinition,
 }): boolean
 	local self = Utilities.AnnotateSelf(self)
 	local effectName = string.lower(args.EffectName)
@@ -265,7 +257,7 @@ function Api:ApplyEffect(args: {
 		return false
 	end
 
-	local effect: EffectInstance = {
+	local effect: Types.EffectInstance = {
 		Name = effectName,
 		Definition = definition,
 		StartTime = now,
@@ -383,7 +375,7 @@ function Api:ClearEffect(args: {
 	return true
 end
 
-function Api:GetRegisteredEffect(effectName: string): EffectDefinition?
+function Api:GetRegisteredEffect(effectName: string): Types.EffectDefinition?
 	local self = Utilities.AnnotateSelf(self)
 	effectName = string.lower(effectName)
 	return self.RegisteredEffects[effectName]
@@ -392,7 +384,7 @@ end
 function Api:GetActiveEffect(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
-}): EffectInstance?
+}): Types.EffectInstance?
 	local self = Utilities.AnnotateSelf(self)
 	local humanoid = args.Humanoid
 	local effectName = string.lower(args.EffectName)

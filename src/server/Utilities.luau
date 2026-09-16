@@ -6,7 +6,7 @@ const Types = require("./Types")
 local Utilities = {}
 
 function Utilities.AnnotateSelf(a: any)
-	return a :: Types.StatusEffectInternal
+	return a :: Types.StatusifyInternal
 end
 
 function Utilities.CreateContext(humanoid: Humanoid, effect: Types.EffectInstance): Types.EffectContext
@@ -18,7 +18,7 @@ function Utilities.CreateContext(humanoid: Humanoid, effect: Types.EffectInstanc
 end
 
 function Utilities.MutateStack(args: {
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Effect: Types.EffectInstance,
 	Humanoid: Humanoid,
 	ApplyValue: number,
@@ -39,7 +39,7 @@ function Utilities.MutateStack(args: {
 end
 
 function Utilities.RemoveFromActive(args: {
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string,
 })
@@ -98,7 +98,7 @@ function Utilities.RemoveFromActive(args: {
 end
 
 function Utilities.RunOnUpdate(args: {
-	Self: Types.StatusEffectInternal,
+	Self: Types.StatusifyInternal,
 	Effect: Types.EffectInstance,
 	Humanoid: Humanoid,
 })

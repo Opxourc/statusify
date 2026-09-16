@@ -31,7 +31,7 @@ function TestHelpers.NewHumanoid()
 	return Instance.new("Humanoid")
 end
 
-function TestHelpers.WaitForCleanup(object: Types.StatusEffectExternal, humanoid: Humanoid)
+function TestHelpers.WaitForCleanup(object: Types.StatusifyInternal, humanoid: Humanoid)
 	(object :: any):Destroy()
 	TestHelpers.AssertEqual(Statusify.GetExistingObject(), nil, "Expected object cleanup to release the singleton")
 	humanoid:Destroy()
