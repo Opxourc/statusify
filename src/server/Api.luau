@@ -57,6 +57,7 @@ function Api.New(args: {
 	self.RegisteredEffects = {} -- These are effects that are considered valid
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
+	self.ActiveEffectCounts = {} -- The number of unique active effects running humanoid, not incluing stacks
 
 	Logger.Output("log", "Object created.")
 	CurrentObject = self
@@ -249,13 +250,14 @@ function Api:ApplyEffect(args: {
 		return true
 	end
 
-	local currentCount = 0
-	for _ in activeEffects do
-		currentCount += 1
+	local effectCount = self.ActiveEffectCounts[humanoid]
+	if not effectCount then
+		effectCount = 0
+		self.ActiveEffectCounts[humanoid] = effectCount
 	end
 
 	-- The number of stacks cannot go higher than the max allowment
-	if currentCount >= self.MaxEffectsPerHumanoid then
+	if effectCount >= self.MaxEffectsPerHumanoid then
 		Logger.Output(
 			"warn",
 			`Attempted to apply ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxEffectsPerHumanoid}).`
@@ -274,6 +276,7 @@ function Api:ApplyEffect(args: {
 	}
 
 	activeEffects[effectName] = effect
+	self.ActiveEffectCounts[humanoid] = math.min(effectCount + 1, self.MaxEffectsPerHumanoid)
 
 	-- Run callback for application
 	if definition.OnApply then
@@ -417,6 +420,11 @@ function Api:HasEffect(args: {
 	end
 
 	return effects[effectName] ~= nil
+end
+
+function Api:GetNumberOfActiveEffects(humanoid: Humanoid): number
+	local self = Utilities.AnnotateSelf(self)
+	return self.ActiveEffectCounts[humanoid] or 0
 end
 
 return table.freeze(Api)

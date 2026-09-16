@@ -69,6 +69,14 @@ function Utilities.RemoveFromActive(args: {
 		Definition = effect.Definition,
 	})
 	activeEffects[effectName] = nil
+
+	if self.ActiveEffectCounts[humanoid] then
+		self.ActiveEffectCounts[humanoid] = math.max(0, self.ActiveEffectCounts[humanoid] - 1)
+		if self.ActiveEffectCounts[humanoid] == 0 then
+			self.ActiveEffectCounts[humanoid] = nil
+		end
+	end
+
 	Logger.Output("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
 
 	-- If there's no more effects under this humanoid, assign nil to it's key

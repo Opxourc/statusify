@@ -130,6 +130,11 @@ export type Statusify = {
 		Destroys the object, releasing everything it owns.
 	]]
 	Destroy: (self: StatusifyInternal) -> (),
+
+	--[[
+		Returns the number of active effects on a humanoid.
+	]]
+	GetNumberOfActiveEffects: (self: StatusifyInternal, humanoid: Humanoid) -> number,
 }
 
 -- Private interface for the framework to work with
@@ -141,6 +146,7 @@ export type StatusifyInternal = Statusify & {
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
 	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true } } },
+	ActiveEffectCounts: { [Humanoid]: number },
 }
 
 return table.freeze({})
