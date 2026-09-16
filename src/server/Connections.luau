@@ -33,18 +33,18 @@ function Connections.CreateRuntime(self: Types.StatusEffectInternal): RBXScriptC
 
 					-- Run callback for tick
 					if effect.Definition.OnTick then
-						Threads.AddToActive(
-							self,
-							humanoid,
-							effectName,
-							task.spawn(function()
+						Threads.AddToActive({
+							Self = self,
+							Humanoid = humanoid,
+							EffectName = effectName,
+							Thread = task.spawn(function()
 								local ok, err =
 									pcall(effect.Definition.OnTick, Utilities.CreateContext(humanoid, effect))
 								if not ok then
 									Logger.Output("error", `OnTick callback for ({effectName}) errored: ({err}).`)
 								end
-							end)
-						)
+							end),
+						})
 					end
 
 					Replication.Replicate({

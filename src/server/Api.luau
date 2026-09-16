@@ -257,17 +257,17 @@ function Api:ApplyEffect(humanoid: Humanoid, effectName: string): boolean
 
 	-- Run callback for application
 	if definition.OnApply then
-		Threads.AddToActive(
-			self,
-			humanoid,
-			effectName,
-			task.spawn(function()
+		Threads.AddToActive({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Thread = task.spawn(function()
 				local ok, err = pcall(definition.OnApply, Utilities.CreateContext(humanoid, effect))
 				if not ok then
 					Logger.Output("warn", `OnApply callback for ({effectName}) errored: ({err}).`)
 				end
-			end)
-		)
+			end),
+		})
 	end
 
 	Replication.Replicate({

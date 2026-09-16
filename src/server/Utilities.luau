@@ -78,17 +78,17 @@ function Utilities.RemoveFromActive(args: {
 
 	-- Run callback for the removal
 	if effect.Definition.OnRemove then
-		Threads.AddToActive(
-			self,
-			humanoid,
-			effectName,
-			task.spawn(function()
+		Threads.AddToActive({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Thread = task.spawn(function()
 				local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
 				if not ok then
 					Logger.Output("error", `OnRemove callback for "{effectName}" errored: ({err}).`)
 				end
-			end)
-		)
+			end),
+		})
 	end
 
 	-- Threads are not cancelled here because we want them to naturally finish up
@@ -109,17 +109,17 @@ function Utilities.RunOnUpdate(args: {
 	local definition = effect.Definition
 
 	if definition.OnUpdate then
-		Threads.AddToActive(
-			self,
-			humanoid,
-			effectName,
-			task.spawn(function()
+		Threads.AddToActive({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Thread = task.spawn(function()
 				local ok, err = pcall(definition.OnUpdate, Utilities.CreateContext(humanoid, effect))
 				if not ok then
 					Logger.Output("error", `OnUpdate callback for "{effectName}" errored: ({err}).`)
 				end
-			end)
-		)
+			end),
+		})
 	end
 end
 

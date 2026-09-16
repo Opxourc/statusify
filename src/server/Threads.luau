@@ -4,7 +4,17 @@ const Logger = require("./Logger")
 local Threads = {}
 const WEAK_METATABLE = { __mode = "k" }
 
-function Threads.AddToActive(self: Types.StatusEffectInternal, humanoid: Humanoid, effectName: string, thread: thread)
+function Threads.AddToActive(args: {
+	Self: Types.StatusEffectInternal,
+	Humanoid: Humanoid,
+	EffectName: string,
+	Thread: thread,
+})
+	local self = args.Self
+	local thread = args.Thread
+	local humanoid = args.Humanoid
+	local effectName = args.EffectName
+
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
 		activeThreads = {}
