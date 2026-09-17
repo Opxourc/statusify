@@ -151,4 +151,17 @@ export type StatusifyInternal = Statusify & {
 	ActiveEffectCounts: { [Humanoid]: number },
 }
 
+-- Package structure to be sent over to clients
+export type Replication = {
+	Message: EventMessage,
+	EffectName: string,
+	ExpireTime: number,
+	StartTime: number,
+	Target: Humanoid,
+	Stacks: number,
+}
+
+-- Messages that are sent for a package
+export type EventMessage = "apply" | "tick" | "remove" | "update"
+
 return table.freeze({})

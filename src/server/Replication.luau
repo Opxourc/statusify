@@ -1,4 +1,3 @@
-const SharedTypes = require("@game/ReplicatedStorage/Shared/Statusify/Types")
 const Logger = require("./Logger")
 const Types = require("./Types")
 
@@ -6,7 +5,7 @@ local Replication = {}
 
 function Replication.Replicate(args: {
 	Definition: Types.EffectDefinition,
-	Message: SharedTypes.EventMessage,
+	Message: Types.EventMessage,
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string,
@@ -54,7 +53,7 @@ function Replication.Replicate(args: {
 	end
 
 	-- Only give enough information to allow the client to build whatever representation they want
-	local packet: SharedTypes.Replication = {
+	local packet: Types.Replication = {
 		EffectName = effectName,
 		Message = message,
 		Target = humanoid,
