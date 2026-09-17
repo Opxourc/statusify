@@ -12,8 +12,10 @@ end
 function Utilities.CreateContext(humanoid: Humanoid, effect: Types.EffectInstance): Types.EffectContext
 	return {
 		Target = humanoid,
-		Effect = effect,
 		Stacks = effect.Stacks,
+		EffectName = effect.Name,
+		StartTime = effect.StartTime,
+		ExpireTime = effect.ExpireTime,
 	}
 end
 

@@ -35,9 +35,11 @@ export type EffectInstance = {
 
 -- The context of the running effect at a given state.
 export type EffectContext = {
-	Effect: EffectInstance,
 	Target: Humanoid,
 	Stacks: number,
+	EffectName: string,
+	StartTime: number,
+	ExpireTime: number,
 }
 
 -- Public interface for scripts trying to use the framework
