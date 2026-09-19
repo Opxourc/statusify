@@ -57,7 +57,7 @@ function Utilities.RemoveFromActive(args: {
 
 	local effect = activeEffects[effectName]
 	if not effect then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have a {effectName} to be removed.`)
+		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have a ({effectName}) to be removed.`)
 		return
 	end
 
@@ -79,7 +79,7 @@ function Utilities.RemoveFromActive(args: {
 		end
 	end
 
-	Logger.Output("log", `Removed {effectName} from ({humanoid:GetFullName()}).`)
+	Logger.Output("log", `Removed ({effectName}) from ({humanoid:GetFullName()}).`)
 
 	-- If there's no more effects under this humanoid, assign nil to it's key
 	if next(activeEffects) == nil then
@@ -95,7 +95,7 @@ function Utilities.RemoveFromActive(args: {
 			Thread = task.spawn(function()
 				local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
 				if not ok then
-					Logger.Output("error", `OnRemove callback for "{effectName}" errored: ({err}).`)
+					Logger.Output("error", `OnRemove callback for ({effectName}) errored: ({err}).`)
 				end
 			end),
 		})
@@ -126,7 +126,7 @@ function Utilities.RunOnUpdate(args: {
 			Thread = task.spawn(function()
 				local ok, err = pcall(definition.OnUpdate, Utilities.CreateContext(humanoid, effect))
 				if not ok then
-					Logger.Output("error", `OnUpdate callback for "{effectName}" errored: ({err}).`)
+					Logger.Output("error", `OnUpdate callback for ({effectName}) errored: ({err}).`)
 				end
 			end),
 		})
