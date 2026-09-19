@@ -57,37 +57,66 @@ function Effects.MutateStack(args: {
 	)
 end
 
-function Effects.RunOnUpdate(args: {
+--[[
+    Calls a callback function within an active effect.
+
+    This callback will be ran a seperate thread so it cannot halt execution if it takes time to complete or errors.
+    
+    If the thread is successfully created, it will be stored under the humanoid.
+]]
+function Effects.RunCallback(args: {
 	Self: Types.StatusifyInternal,
 	Effect: Types.EffectInstance,
+	EventMessage: Types.EventMessage,
 	Humanoid: Humanoid,
 })
 	local self = args.Self
 	local effect = args.Effect
 	local humanoid = args.Humanoid
-	local effectName = effect.Name
+	local eventMessage = args.EventMessage
 	local definition = effect.Definition
 
-	if definition.OnUpdate then
-		Threads.AddToActive({
-			Self = self,
-			Humanoid = humanoid,
-			EffectName = effectName,
-			Thread = task.spawn(function()
-				local ok, err = pcall(definition.OnUpdate, Utilities.CreateContext(humanoid, effect))
-				if not ok then
-					Logger.Output("error", `OnUpdate callback for ({effectName}) errored: ({err}).`)
-				end
-			end),
-		})
+	local function createThread(
+		callback: (context: Types.EffectContext) -> (),
+		callbackName: string,
+		context: Types.EffectContext
+	)
+		return task.spawn(function()
+			local ok, err = pcall(callback, context)
+			if not ok then
+				Logger.Output(
+					"error",
+					`({callback}) callback for ({effect.Name}) errored on ({humanoid:GetFullName()}): ({err}).`
+				)
+			end
+		end)
 	end
-end
 
-function Effects.Add(args: {
-	Self: Types.StatusifyInternal,
-	Humanoid: Humanoid,
-	EffectName: string,
-}) end
+	-- Run the callback based on EventMessage
+	local thread: thread? = nil
+	local context = Utilities.CreateContext(humanoid, effect)
+
+	if eventMessage == "apply" and definition.OnApply then
+		thread = createThread(definition.OnApply, "OnApply", context)
+	elseif eventMessage == "tick" and definition.OnTick then
+		thread = createThread(definition.OnTick, "OnTick", context)
+	elseif eventMessage == "update" and definition.OnUpdate then
+		thread = createThread(definition.OnUpdate, "OnApply", context)
+	elseif eventMessage == "remove" and definition.OnRemove then
+		thread = createThread(definition.OnRemove, "OnRemove", context)
+	else
+		Logger.Output("error", `Unknown message provided for calling status effect callback. Got: ({eventMessage}).`)
+		return
+	end
+
+	-- Store thread if it was successfully created
+	Threads.AddToActive({
+		Self = self,
+		Humanoid = humanoid,
+		EffectName = effect.Name,
+		Thread = thread,
+	})
+end
 
 function Effects.Remove(args: {
 	Self: Types.StatusifyInternal,
