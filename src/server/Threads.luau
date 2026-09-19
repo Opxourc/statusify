@@ -73,7 +73,7 @@ function Threads.CancelAllFromActive(args: {
 		if not threads then
 			Logger.Output(
 				"warn",
-				`({humanoid:GetFullName()}) doesn't have an active {effectName} effect to cancel threads from.`
+				`({humanoid:GetFullName()}) doesn't have an active ({effectName}) effect to cancel threads from.`
 			)
 			return
 		end
@@ -90,7 +90,7 @@ function Threads.CancelAllFromActive(args: {
 			`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
 		)
 	else
-		Logger.Output("warn", `Unknown action to cancel threads. Got: {action}.`)
+		Logger.Output("warn", `Unknown action to cancel threads. Got: ({action}).`)
 	end
 end
 
