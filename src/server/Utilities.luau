@@ -1,4 +1,5 @@
 const Replication = require("./Replication")
+const Watcher = require("./Watcher")
 const Threads = require("./Threads")
 const Logger = require("./Logger")
 const Types = require("./Types")
@@ -83,6 +84,7 @@ function Utilities.RemoveFromActive(args: {
 
 	-- If there's no more effects under this humanoid, assign nil to it's key
 	if next(activeEffects) == nil then
+		Watcher.Destroy(self, humanoid)
 		self.ActiveEffects[humanoid] = nil
 	end
 

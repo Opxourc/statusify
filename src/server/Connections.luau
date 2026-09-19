@@ -1,5 +1,4 @@
 const RunService = game:GetService("RunService")
-const Players = game:GetService("Players")
 
 const Replication = require("./Replication")
 const Utilities = require("./Utilities")
@@ -23,11 +22,13 @@ function Connections.CreateRuntime(self: Types.StatusifyInternal): RBXScriptConn
 		for humanoid, activeEffects in self.ActiveEffects do
 			for effectName, effect in activeEffects do
 				if now >= effect.ExpireTime then
+					-- Remove from active and clean up the destroyer
 					Utilities.RemoveFromActive({
 						Self = self,
 						Humanoid = humanoid,
 						EffectName = effectName,
 					})
+					Connections.DestroyWatcher(self, humanoid)
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
 
@@ -60,75 +61,34 @@ function Connections.CreateRuntime(self: Types.StatusifyInternal): RBXScriptConn
 	end)
 end
 
-function Connections.CreateWatcher(self: Types.StatusifyInternal): { [RBXScriptConnection]: true }
-	if self.WatcherConnections ~= nil and next(self.WatcherConnections) ~= nil then
-		Logger.Output("warn", "Attempted to create new watcher connections when they already exist.")
-		return {}
+function Connections.CreateWatcher(self: Types.StatusifyInternal, humanoid: Humanoid): RBXScriptConnection?
+	if self.WatcherConnections[humanoid] ~= nil then
+		Logger.Output(
+			"warn",
+			`Attempted to create new watcher connection for ({humanoid:GetFullName()}) when it already exist.`
+		)
+		return nil
 	end
 
-	local connections: { [RBXScriptConnection]: true } = {}
-	local function getHumanoid(character: Model?, waitForHumanoid: boolean): Humanoid?
-		if not character then
-			return nil
-		end
+	-- Whenever the humanoid is being destroyed, disconnect the watcher and clean up all effects on the humanoid
+	return humanoid.Destroying:Connect(function()
+		Connections.DestroyWatcher(self, humanoid)
+		self:ClearEffect({
+			Action = "removeAll",
+			Humanoid = humanoid,
+		})
+	end)
+end
 
-		if waitForHumanoid then
-			return character:WaitForChild("Humanoid", 5) :: Humanoid?
-		end
-
-		return character:FindFirstChildOfClass("Humanoid")
+function Connections.DestroyWatcher(self: Types.StatusifyInternal, humanoid: Humanoid)
+	local connection = self.WatcherConnections[humanoid]
+	if not connection then
+		Logger.Output("warn", `There's no watcher connection to disconnect for ({humanoid:GetFullName()}).`)
+		return
 	end
 
-	local function createDiedEvent(character: Model?)
-		local humanoid = getHumanoid(character, true)
-		if not humanoid then
-			return
-		end
-
-		-- If the humanoid dies, remove all effects automatically
-		connections[humanoid.Died:Connect(function()
-			self:ClearEffect({
-				Humanoid = humanoid,
-				Action = "removeAll",
-			})
-			Threads.CancelAllFromActive({
-				Self = self,
-				Humanoid = humanoid,
-				Action = "cancelAll",
-			})
-		end)] =
-			true
-	end
-
-	local function watchPlayer(player: Player)
-		createDiedEvent(player.Character)
-		connections[player.CharacterAdded:Connect(createDiedEvent)] = true
-	end
-
-	-- Catch any players that are already in the game
-	for _, player in Players:GetPlayers() do
-		watchPlayer(player)
-	end
-
-	-- Connection to catch incoming players and outgoing players
-	connections[Players.PlayerAdded:Connect(watchPlayer)] = true
-	connections[Players.PlayerRemoving:Connect(function(player)
-		local humanoid = getHumanoid(player.Character, false)
-		if humanoid then
-			self:ClearEffect({
-				Humanoid = humanoid,
-				Action = "removeAll",
-			})
-			Threads.CancelAllFromActive({
-				Self = self,
-				Humanoid = humanoid,
-				Action = "cancelAll",
-			})
-		end
-	end)] =
-		true
-
-	return connections
+	connection:Disconnect()
+	self.WatcherConnections[humanoid] = nil
 end
 
 return table.freeze(Connections)

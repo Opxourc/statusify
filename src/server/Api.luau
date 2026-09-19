@@ -3,8 +3,9 @@ const Logger = require("./Logger")
 const Threads = require("./Threads")
 const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
-const Connections = require("./Connections")
 const Replication = require("./Replication")
+const Runtime = require("./Runtime")
+const Watcher = require("./Watcher")
 
 local CurrentObject: Types.Statusify? = nil -- Represents the single object
 local Api = {}
@@ -38,21 +39,15 @@ function Api.New(args: {
 
 	local self = setmetatable({}, Api)
 
-	-- Connections to handle the active states of effects when a humanoid dies or if a player leaves and joins
-	self.WatcherConnections = Connections.CreateWatcher(self)
-	if next(self.WatcherConnections) == nil then
-		Logger.Output("warn", "Unable to create object due to watcher creation failure.")
-		return nil
-	end
-
 	-- Connection that runs the lifecycle of currently running effects
-	self.RuntimeConnection = Connections.CreateRuntime(self)
+	self.RuntimeConnection = Runtime.Create(self)
 	if self.RuntimeConnection == nil then
 		Logger.Output("warn", "Unable to create object due to runtime creation failure.")
 		return nil
 	end
 
 	self.MaxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.CD_DefaultMaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
+	self.WatcherConnections = {} -- Connections that are dynamically created and destroyed to clean up humanoids
 	self.ReplicationEvent = replicationEvent -- This will be used to send replication events to clients
 	self.RegisteredEffects = {} -- These are effects that are considered valid
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
@@ -200,6 +195,7 @@ function Api:ApplyEffect(args: {
 	if not activeEffects then
 		activeEffects = {}
 		self.ActiveEffects[humanoid] = activeEffects
+		Watcher.Create(self, humanoid)
 	end
 
 	-- If the effect already exists, check the StackBehavior to decide what to do

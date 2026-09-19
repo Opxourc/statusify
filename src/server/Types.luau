@@ -141,7 +141,7 @@ export type Statusify = {
 
 -- Private interface for the framework to work with
 export type StatusifyInternal = Statusify & {
-	WatcherConnections: { [RBXScriptConnection]: true },
+	WatcherConnections: { [Humanoid]: RBXScriptConnection },
 	RuntimeConnection: RBXScriptConnection,
 	MaxEffectsPerHumanoid: number,
 	ReplicationEvent: RemoteEvent,
