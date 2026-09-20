@@ -8,33 +8,20 @@ const Replication = require("./Replication")
 const Runtime = require("./Runtime")
 const Watcher = require("./Watcher")
 
-local CurrentObject: Types.Statusify? = nil -- Represents the single object
 local Api = {}
 Api.__index = Api
 
 --[[
-	Returns the currently existing object.
-]]
-function Api.GetExistingObject()
-	return CurrentObject
-end
+	Constructs a new Statusify object.
 
---[[
-	Constructs a new object.
-	Only one object can exist at a time and should be referenced by .GetExistingObject() instead.
+	@param MaxEffectsPerHumanoid - The maximum number of effects a humanoid can have active. Defaults to 3 if not provided.
+	@param ReplicatedEvent - For replicating messages to the client to visually show effects and states. Replication won't happen if this is nil.
+	@return Constructed Statusify object.
 ]]
 function Api.New(args: {
 	MaxEffectsPerHumanoid: number?,
 	ReplicationEvent: RemoteEvent?,
 }): Types.Statusify?
-	if CurrentObject then
-		Logger.Output(
-			"warn",
-			"Attempted to create object when one already exists. Use .GetExistingObject() to get this object instead!"
-		)
-		return nil
-	end
-
 	local maxEffectsPerHumanoid = args.MaxEffectsPerHumanoid
 	local replicationEvent = args.ReplicationEvent
 
@@ -55,14 +42,11 @@ function Api.New(args: {
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
 
 	Logger.Output("log", "Object created.")
-	CurrentObject = self
-
-	return self
+	return self :: Types.StatusifyInternal
 end
 
 function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
-	CurrentObject = nil
 
 	for connection in self.WatcherConnections do
 		connection:Disconnect()
