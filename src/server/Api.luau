@@ -25,7 +25,7 @@ end
 ]]
 function Api.New(args: {
 	MaxEffectsPerHumanoid: number?,
-	ReplicationEvent: RemoteEvent,
+	ReplicationEvent: RemoteEvent?,
 }): Types.Statusify?
 	if CurrentObject then
 		Logger.Output(

@@ -10,11 +10,16 @@ function Replication.Replicate(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
 })
+	-- If there's no ReplicationEvent, then replication is not gonna be used
+	local self = args.Self
+	if not self.ReplicationEvent then
+		return
+	end
+
 	local definition = args.Definition
 	local effectName = args.EffectName
 	local humanoid = args.Humanoid
 	local message = args.Message
-	local self = args.Self
 
 	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
