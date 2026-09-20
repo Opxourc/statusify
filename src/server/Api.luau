@@ -1,6 +1,7 @@
 const Types = require("./Types")
 const Logger = require("./Logger")
 const Threads = require("./Threads")
+const Effects = require("./Effects")
 const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
@@ -74,7 +75,7 @@ function Api:Destroy()
 
 	for humanoid, effects in self.ActiveEffects do
 		for effectName in effects do
-			Utilities.RemoveFromActive({
+			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
@@ -159,7 +160,8 @@ function Api:UnregisterEffect(args: {
 			if not activeEffects[effectName] then
 				continue
 			end
-			Utilities.RemoveFromActive({
+
+			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
@@ -212,13 +214,15 @@ function Api:ApplyEffect(args: {
 		if definition.StackBehavior == "ignore" then
 			-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
 		elseif definition.StackBehavior == "stack" then
-			Utilities.MutateStack({
+			Effects.MutateStack({
 				Self = self,
 				Humanoid = humanoid,
 				Effect = existing,
 				ApplyValue = 1,
 			})
-			Utilities.RunOnUpdate({
+
+			Effects.RunCallback({
+				EventMessage = "update",
 				Self = self,
 				Effect = existing,
 				Humanoid = humanoid,
@@ -232,7 +236,9 @@ function Api:ApplyEffect(args: {
 				Definition = definition,
 				Humanoid = humanoid,
 			})
-			Utilities.RunOnUpdate({
+
+			Effects.RunCallback({
+				EventMessage = "update",
 				Self = self,
 				Effect = existing,
 				Humanoid = humanoid,
@@ -314,66 +320,44 @@ function Api:ClearEffect(args: {
 		return false
 	end
 
+	-- Use Action to determine what case to run
 	if action == "remove" then
-		Utilities.RemoveFromActive({
+		Effects.Remove({
 			Self = self,
 			Humanoid = humanoid,
 			EffectName = effectName,
 		})
-		Logger.Output("log", `Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
 	elseif action == "removeAll" then
-		local activeEffects = self.ActiveEffects[humanoid]
-		if not activeEffects then
-			Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects to remove.`)
-			return false
-		end
+		local activeEffects = Utilities.GetActiveEffects({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Source = "Removing all active effects",
+		})
 
 		for effectName in activeEffects do
-			Utilities.RemoveFromActive({
+			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
 			})
 		end
-		Logger.Output("log", `Removed all status effects from ({humanoid:GetFullName()}).`)
 	elseif action == "decrement" then
-		local activeEffects = self.ActiveEffects[humanoid]
-		if not activeEffects then
-			Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects to decrement.`)
-			return false
-		end
+		local _, effect = Utilities.GetActiveEffects({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Source = "Decrementing stack count",
+		})
 
-		local effect = activeEffects[effectName]
-		if not effect then
-			Logger.Output(
-				"warn",
-				`({humanoid:GetFullName()}) doesn't have a active ({effectName}) effect to decrement.`
-			)
-			return false
-		end
-
-		local previous = effect.Stacks
-		Utilities.MutateStack({
+		Effects.MutateStack({
 			Self = self,
 			Humanoid = humanoid,
 			Effect = effect,
 			ApplyValue = -1,
 		})
-		local subsequent = effect.Stacks
-
-		if effect.Stacks == 0 then
-			Utilities.RemoveFromActive({
-				Self = self,
-				Humanoid = humanoid,
-				EffectName = effectName,
-			})
-		end
-		Logger.Output(
-			"log",
-			`Decremented ({effectName}) status effect from ({humanoid:GetFullName()}) to ({previous} -> {subsequent}).`
-		)
 	else
-		Logger.Output("warn", `Unknown action provided. Got: ({action})`)
+		Logger.Output("warn", `Unknown action provided. Got: ({action}).`)
 		return false
 	end
 

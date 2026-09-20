@@ -1,9 +1,8 @@
 const RunService = game:GetService("RunService")
 
-const Connections = require("./Connections")
 const Replication = require("./Replication")
-const Utilities = require("./Utilities")
-const Threads = require("./Threads")
+const Watcher = require("./Watcher")
+const Effects = require("./Effects")
 const Logger = require("./Logger")
 const Types = require("./Types")
 
@@ -22,32 +21,24 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 		-- We also don't want it to halt the entire Heartbeat connection if one errors or yields
 		for humanoid, activeEffects in self.ActiveEffects do
 			for effectName, effect in activeEffects do
+				-- If the time expires, clean up the effect under the humanoid
+				-- Otherwise run a tick as long as tick is higher than 0
 				if now >= effect.ExpireTime then
-					-- Remove from active and clean up the destroyer
-					Utilities.RemoveFromActive({
+					Effects.Remove({
 						Self = self,
 						Humanoid = humanoid,
 						EffectName = effectName,
 					})
-					Connections.DestroyWatcher(self, humanoid)
+					Watcher.Destroy(self, humanoid)
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
 
-					-- Run callback for tick
-					if effect.Definition.OnTick then
-						Threads.AddToActive({
-							Self = self,
-							Humanoid = humanoid,
-							EffectName = effectName,
-							Thread = task.spawn(function()
-								local ok, err =
-									pcall(effect.Definition.OnTick, Utilities.CreateContext(humanoid, effect))
-								if not ok then
-									Logger.Output("error", `OnTick callback for ({effectName}) errored: ({err}).`)
-								end
-							end),
-						})
-					end
+					Effects.RunCallback({
+						EventMessage = "tick",
+						Self = self,
+						Humanoid = humanoid,
+						Effect = effect,
+					})
 
 					Replication.Replicate({
 						Self = self,
