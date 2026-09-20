@@ -1,3 +1,5 @@
+--!strict
+
 const Types = require("./Types")
 const Logger = require("./Logger")
 const Threads = require("./Threads")
@@ -6,7 +8,6 @@ const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
 const Runtime = require("./Runtime")
-const Watcher = require("./Watcher")
 
 local Api = {}
 Api.__index = Api
@@ -16,7 +17,7 @@ Api.__index = Api
 
 	@param MaxEffectsPerHumanoid - The maximum number of effects a humanoid can have active. Defaults to 3 if not provided.
 	@param ReplicatedEvent - For replicating messages to the client to visually show effects and states. Replication won't happen if this is nil.
-	@return Constructed Statusify object.
+	@return Statusify object.
 ]]
 function Api.New(args: {
 	MaxEffectsPerHumanoid: number?,
@@ -42,9 +43,12 @@ function Api.New(args: {
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
 
 	Logger.Output("log", "Object created.")
-	return self :: Types.StatusifyInternal
+	return self
 end
 
+--[[
+	Destroys the object, releasing everything it owns.
+]]
 function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 
@@ -69,7 +73,23 @@ function Api:Destroy()
 	Logger.Output("log", "Object destroyed.")
 end
 
-function Api:RegisterEffect(args: {
+--[[
+	Register an effect status to be available for use.
+
+	Definition:
+
+	- Definition properties will be defaulted to a value if they're nil.
+	- Use a number <= 0 for Interval to disable ticking (no logic and replication for ticks)
+	- Use math.huge for Duration for a permanent duration (effect is either removed when humanoid dies or manual removal)
+	- Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
+	- Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
+
+	@param EffectName The effect name to register.
+	@param Definition The contract that contains all the callbacks and information about a status effect.
+
+	@return boolean whether successful.
+]]
+function Api:Register(args: {
 	EffectName: string,
 	Definition: Types.EffectDefinition,
 }): boolean
@@ -77,6 +97,7 @@ function Api:RegisterEffect(args: {
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local definition = args.Definition
 
+	-- Can't register name if it is already registered
 	if self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to register ({effectName}) when it's already registered.`)
 		return false
@@ -123,7 +144,18 @@ function Api:RegisterEffect(args: {
 	return true
 end
 
-function Api:UnregisterEffect(args: {
+--[[
+	Unregister an status effect so it can no longer be applied.
+
+	If the effect is still running on a humanoid even after it's unregistration,
+	it can still be removed manually by :Remove or automatically through connections within Statusify.
+
+	@param EffectName The effect name to unregister.
+	@param Terminate If true, the status effect will be removed for all humanoids without letting them naturally finish up.
+
+	@return boolean whether successful.
+]]
+function Api:Unregister(args: {
 	EffectName: string,
 	Terminate: boolean,
 }): boolean
@@ -131,6 +163,7 @@ function Api:UnregisterEffect(args: {
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local terminate = args.Terminate
 
+	-- The effect has to be registered
 	if not self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to unregister ({effectName}) when it wasn't registered.`)
 		return false
@@ -149,6 +182,7 @@ function Api:UnregisterEffect(args: {
 				Humanoid = humanoid,
 				EffectName = effectName,
 			})
+
 			Threads.CancelAllFromActive({
 				Self = self,
 				Humanoid = humanoid,
@@ -161,7 +195,15 @@ function Api:UnregisterEffect(args: {
 	return true
 end
 
-function Api:ApplyEffect(args: {
+--[[
+	Apply an status effect onto a humanoid.
+
+	@param Humanoid The humanoid to take the new status effect.
+	@param EffectName The effect status that will be applied. This name should be registered first before being applied.
+
+	@return boolean whether successful.
+]]
+function Api:Apply(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
 }): boolean
@@ -169,6 +211,7 @@ function Api:ApplyEffect(args: {
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local humanoid = args.Humanoid
 
+	-- There should be a definition for this effect name
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
 		Logger.Output("warn", `Attempted to apply unregistered effect ({effectName}) onto ({humanoid:GetFullName()}).`)
@@ -176,88 +219,104 @@ function Api:ApplyEffect(args: {
 	end
 
 	local now = workspace:GetServerTimeNow()
-	local activeEffects = self.ActiveEffects[humanoid]
-	if not activeEffects then
-		activeEffects = {}
-		self.ActiveEffects[humanoid] = activeEffects
-		Watcher.Create(self, humanoid)
-	end
 
-	-- If the effect already exists, check the StackBehavior to decide what to do
-	local existing = activeEffects[effectName]
-	if existing then
-		if now < existing.NextAvailableApplyTime then
-			Logger.Output(
-				"warn",
-				`({effectName}) for ({humanoid:GetFullName()}) was throttled. No reapplication was ran.`
-			)
-			return false
-		end
-
-		local function operateBehavior(mutateStack: boolean, resetDuration: boolean)
-			Replication.Replicate({
-				Self = self,
-				Message = "update",
-				EffectName = effectName,
-				Definition = definition,
-				Humanoid = humanoid,
-			})
-
-			Effects.RunCallback({
-				EventMessage = "update",
-				Self = self,
-				Effect = existing,
-				Humanoid = humanoid,
-			})
-
-			if mutateStack then
-				Effects.MutateStack({
-					Self = self,
-					Humanoid = humanoid,
-					Effect = existing,
-					ApplyValue = 1,
-				})
-			end
-
-			if resetDuration then
-				existing.ExpireTime = now + definition.Duration
-			end
-		end
-
-		if definition.StackBehavior == "ignore" then
-			-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
-		elseif definition.StackBehavior == "stack" then
-			operateBehavior(true, false)
-		elseif definition.StackBehavior == "refresh" then
-			operateBehavior(false, true)
-		elseif definition.StackBehavior == "stack_refresh" then
-			operateBehavior(true, true)
-		else
-			Logger.Output("warn", `Unknown stack behavior provided. Got: ({definition.StackBehavior}).`)
-			return false
-		end
-
-		existing.NextAvailableApplyTime = now + definition.Throttle -- Mutate after stack behavior is verified
-		return true
-	end
-
-	-- Create the effect and add it to the humanoid
-	return Effects.Add({
+	-- If the effect already exists, use StackBehavior to determine how stacking will work
+	-- If effect doesn't exist, then create a new instance of it for the humanoid
+	local _, effect = Utilities.GetActiveEffects({
+		EffectName = effectName,
 		Self = self,
+		Source = ":Apply",
 		Humanoid = humanoid,
-		Effect = {
-			Name = effectName,
-			Definition = definition,
-			StartTime = now,
-			Stacks = 1,
-			NextAvailableApplyTime = now + definition.Throttle,
-			ExpireTime = now + (definition.Duration :: number),
-			NextTickTime = now + (definition.Interval :: number),
-		},
 	})
+
+	if not effect then
+		return Effects.Add({
+			Self = self,
+			Humanoid = humanoid,
+			Effect = {
+				Name = effectName,
+				Definition = definition,
+				StartTime = now,
+				Stacks = 1,
+				NextAvailableApplyTime = now + definition.Throttle,
+				ExpireTime = now + (definition.Duration :: number),
+				NextTickTime = now + (definition.Interval :: number),
+			},
+		})
+	end
+
+	-- When throttling, the application timing cannot be too fast
+	if now < effect.NextAvailableApplyTime then
+		Logger.Output(
+			"warn",
+			`({effectName}) for ({humanoid:GetFullName()}) was throttled. No stacking behavior was ran.`
+		)
+		return false
+	end
+
+	local function operateBehavior(mutateStack: boolean, resetDuration: boolean)
+		Replication.Replicate({
+			Self = self,
+			Message = "update",
+			EffectName = effectName,
+			Definition = definition,
+			Humanoid = humanoid,
+		})
+
+		Effects.RunCallback({
+			EventMessage = "update",
+			Self = self,
+			Effect = effect,
+			Humanoid = humanoid,
+		})
+
+		if mutateStack then
+			Effects.MutateStack({
+				Self = self,
+				Humanoid = humanoid,
+				Effect = effect,
+				ApplyValue = 1,
+			})
+		end
+
+		if resetDuration then
+			effect.ExpireTime = now + definition.Duration
+		end
+	end
+
+	if definition.StackBehavior == "ignore" then
+		-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
+	elseif definition.StackBehavior == "stack" then
+		operateBehavior(true, false)
+	elseif definition.StackBehavior == "refresh" then
+		operateBehavior(false, true)
+	elseif definition.StackBehavior == "stack_refresh" then
+		operateBehavior(true, true)
+	else
+		Logger.Output("warn", `Unknown stack behavior provided. Got: ({definition.StackBehavior}).`)
+		return false
+	end
+
+	effect.NextAvailableApplyTime = now + definition.Throttle -- Mutate after stack behavior is verified
+	return true
 end
 
-function Api:ClearEffect(args: {
+--[[
+	Remove an effect status from a humanoid.
+
+	Action meanings:
+
+	- remove: Remove the specified status.
+	- removeAll: Remove every status from the humanoid. An effect name does not need to be provided.
+	- decrement: Remove one stack of the effect. If the stack drops to 0, it will be removed automatically.
+	
+	@param Action Determines how removal should work.
+	@param EffectName The effect that will be targeted. This can be optional.
+	@param Humanoid The humanoid to check.
+
+	@return boolean whether successful.
+]]
+function Api:Remove(args: {
 	Action: "remove" | "removeAll" | "decrement",
 	EffectName: string?,
 	Humanoid: Humanoid,
@@ -267,18 +326,21 @@ function Api:ClearEffect(args: {
 	local action = args.Action
 	local effectName = args.EffectName and Utilities.NormalizeEffectName(args.EffectName) or nil
 
+	-- A effect name should have been provided if the actions were "remove" or "decrement"
 	if (action == "remove" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
 		return false
 	end
 
-	-- Use Action to determine what case to run
+	-- Remove the specific active effect from the humanoid
 	if action == "remove" then
 		Effects.Remove({
 			Self = self,
 			Humanoid = humanoid,
-			EffectName = effectName,
+			EffectName = effectName :: string,
 		})
+
+	-- Remove all active effects from the humanoid
 	elseif action == "removeAll" then
 		local activeEffects = Utilities.GetActiveEffects({
 			Self = self,
@@ -287,13 +349,17 @@ function Api:ClearEffect(args: {
 			Source = "Removing all active effects",
 		})
 
-		for effectName in activeEffects do
-			Effects.Remove({
-				Self = self,
-				Humanoid = humanoid,
-				EffectName = effectName,
-			})
+		if activeEffects then
+			for name in activeEffects do
+				Effects.Remove({
+					Self = self,
+					Humanoid = humanoid,
+					EffectName = name,
+				})
+			end
 		end
+
+	-- Decrement the stack value of the specific effect by 1
 	elseif action == "decrement" then
 		local _, effect = Utilities.GetActiveEffects({
 			Self = self,
@@ -302,12 +368,14 @@ function Api:ClearEffect(args: {
 			Source = "Decrementing stack count",
 		})
 
-		Effects.MutateStack({
-			Self = self,
-			Humanoid = humanoid,
-			Effect = effect,
-			ApplyValue = -1,
-		})
+		if effect then
+			Effects.MutateStack({
+				Self = self,
+				ApplyValue = -1,
+				Humanoid = humanoid,
+				Effect = effect,
+			})
+		end
 	else
 		Logger.Output("warn", `Unknown action provided. Got: ({action}).`)
 		return false
@@ -316,47 +384,46 @@ function Api:ClearEffect(args: {
 	return true
 end
 
-function Api:GetRegisteredEffect(effectName: string): Types.EffectDefinition?
-	local self = Utilities.AnnotateSelf(self)
-	effectName = Utilities.NormalizeEffectName(effectName)
-	return self.RegisteredEffects[effectName]
+--[[
+	Returns the registered EffectDefinition for the given effect name.
+
+	@param effectName The effect's name that will be checked for registeration.
+	@return EffectDefinition or nil if not found.
+]]
+function Api:GetRegistered(effectName: string): Types.EffectDefinition?
+	return Utilities.AnnotateSelf(self).RegisteredEffects[Utilities.NormalizeEffectName(effectName)]
 end
 
-function Api:GetActiveEffect(args: {
+--[[
+	Returns the active EffectInstance for a humanoid.
+
+	@param Humanoid The humanoid to check.
+	@param EffectName The status effect's name to check under the humanoid.
+
+	@return EffectInstance or nil if not found.
+]]
+function Api:GetActive(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
 }): Types.EffectInstance?
-	local self = Utilities.AnnotateSelf(self)
-	local humanoid = args.Humanoid
-	local effectName = Utilities.NormalizeEffectName(args.EffectName)
+	local _, effect = Utilities.GetActiveEffects({
+		EffectName = Utilities.NormalizeEffectName(args.EffectName),
+		Humanoid = args.Humanoid,
+		Self = Utilities.AnnotateSelf(self),
+		Source = ":GetActive",
+	})
 
-	local activeEffects = self.ActiveEffects[humanoid]
-	if not activeEffects then
-		return nil
-	end
-
-	return activeEffects[effectName]
+	return effect
 end
 
-function Api:HasEffect(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-}): boolean
-	local self = Utilities.AnnotateSelf(self)
-	local humanoid = args.Humanoid
-	local effectName = Utilities.NormalizeEffectName(args.EffectName)
+--[[
+	Returns the count of active running effects for a given humanoid.
 
-	local effects = self.ActiveEffects[humanoid]
-	if not effects then
-		return false
-	end
-
-	return effects[effectName] ~= nil
-end
-
-function Api:GetNumberOfActiveEffects(humanoid: Humanoid): number
-	local self = Utilities.AnnotateSelf(self)
-	return Utilities.GetActiveCount(self, humanoid)
+	@param humanoid The Humanoid to check.
+	@return Number for the count.
+]]
+function Api:GetActiveCount(humanoid: Humanoid): number
+	return Utilities.GetActiveCount(Utilities.AnnotateSelf(self), humanoid)
 end
 
 return table.freeze(Api)
