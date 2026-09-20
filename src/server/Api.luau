@@ -211,24 +211,7 @@ function Api:ApplyEffect(args: {
 			return false
 		end
 
-		if definition.StackBehavior == "ignore" then
-			-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
-		elseif definition.StackBehavior == "stack" then
-			Effects.MutateStack({
-				Self = self,
-				Humanoid = humanoid,
-				Effect = existing,
-				ApplyValue = 1,
-			})
-
-			Effects.RunCallback({
-				EventMessage = "update",
-				Self = self,
-				Effect = existing,
-				Humanoid = humanoid,
-			})
-		elseif definition.StackBehavior == "refresh" then
-			existing.ExpireTime = now + definition.Duration
+		local function operateBehavior(mutateStack: boolean, resetDuration: boolean)
 			Replication.Replicate({
 				Self = self,
 				Message = "update",
@@ -243,6 +226,29 @@ function Api:ApplyEffect(args: {
 				Effect = existing,
 				Humanoid = humanoid,
 			})
+
+			if mutateStack then
+				Effects.MutateStack({
+					Self = self,
+					Humanoid = humanoid,
+					Effect = existing,
+					ApplyValue = 1,
+				})
+			end
+
+			if resetDuration then
+				existing.ExpireTime = now + definition.Duration
+			end
+		end
+
+		if definition.StackBehavior == "ignore" then
+			-- Case ignore is here despite being empty so it doesn't fall into the 'else' statement
+		elseif definition.StackBehavior == "stack" then
+			operateBehavior(true, false)
+		elseif definition.StackBehavior == "refresh" then
+			operateBehavior(false, true)
+		elseif definition.StackBehavior == "stack_refresh" then
+			operateBehavior(true, true)
 		else
 			Logger.Output("warn", `Unknown stack behavior provided. Got: ({definition.StackBehavior}).`)
 			return false
@@ -280,20 +286,12 @@ function Api:ApplyEffect(args: {
 	activeEffects[effectName] = effect
 	self.ActiveEffectCounts[humanoid] = math.min(effectCount + 1, self.MaxEffectsPerHumanoid)
 
-	-- Run callback for application
-	if definition.OnApply then
-		Threads.AddToActive({
-			Self = self,
-			Humanoid = humanoid,
-			EffectName = effectName,
-			Thread = task.spawn(function()
-				local ok, err = pcall(definition.OnApply, Utilities.CreateContext(humanoid, effect))
-				if not ok then
-					Logger.Output("warn", `OnApply callback for ({effectName}) errored: ({err}).`)
-				end
-			end),
-		})
-	end
+	Effects.RunCallback({
+		EventMessage = "apply",
+		Self = self,
+		Humanoid = humanoid,
+		Effect = effect,
+	})
 
 	Replication.Replicate({
 		Self = self,
