@@ -83,21 +83,12 @@ function Effects.RunCallback(args: {
 	)
 		-- we'd want this to not yield the main thread if it takes longer to complete
 		return task.spawn(function()
-			-- This thread will run the wanted callback
-			-- Will return when the callback finishes or an error happens
-			local thread = task.spawn(function()
-				local ok, err = pcall(callback, context)
-				if not ok then
-					Logger.Output(
-						"error",
-						`({callback}) callback for ({effect.Name}) errored on ({humanoid:GetFullName()}): ({err}).`
-					)
-				end
-			end)
-
-			-- This will automatically finish this thread if the effect ends or if the callback thread ends
-			while coroutine.status(thread) ~= "dead" or effect.Removed do
-				break
+			local ok, err = pcall(callback, context)
+			if not ok then
+				Logger.Output(
+					"error",
+					`({callback}) callback for ({effect.Name}) errored on ({humanoid:GetFullName()}): ({err}).`
+				)
 			end
 		end)
 	end
@@ -120,7 +111,7 @@ function Effects.RunCallback(args: {
 	end
 
 	-- Store thread if it was successfully created
-	Threads.AddToActive({
+	Threads.Add({
 		Self = self,
 		Humanoid = humanoid,
 		EffectName = effect.Name,
