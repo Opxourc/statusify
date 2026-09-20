@@ -220,18 +220,6 @@ function Effects.Remove(args: {
 	})
 
 	activeEffects[effectName] = nil
-
-	local effectCounts = self.ActiveEffectCounts[humanoid]
-	if effectCounts then
-		effectCounts = math.max(0, effectCounts - 1)
-
-		if effectCounts == 0 then
-			effectCounts = nil
-		end
-
-		self.ActiveEffectCounts[humanoid] = effectCounts
-	end
-
 	Logger.Output("log", `Removed ({effectName}) from ({humanoid:GetFullName()}).`)
 
 	-- If there's no more effects under this humanoid

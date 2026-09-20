@@ -53,7 +53,6 @@ function Api.New(args: {
 	self.RegisteredEffects = {} -- These are effects that are considered valid
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
-	self.ActiveEffectCounts = {} -- The number of unique active effects running humanoid, not incluing stacks
 
 	Logger.Output("log", "Object created.")
 	CurrentObject = self
@@ -373,7 +372,7 @@ end
 
 function Api:GetNumberOfActiveEffects(humanoid: Humanoid): number
 	local self = Utilities.AnnotateSelf(self)
-	return self.ActiveEffectCounts[humanoid] or 0
+	return Utilities.GetActiveCount(self, humanoid)
 end
 
 return table.freeze(Api)

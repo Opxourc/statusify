@@ -149,7 +149,6 @@ export type StatusifyInternal = Statusify & {
 	RegisteredEffects: { [string]: EffectDefinition },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
 	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true } } },
-	ActiveEffectCounts: { [Humanoid]: number },
 }
 
 -- Package structure to be sent over to clients
