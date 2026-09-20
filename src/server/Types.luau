@@ -45,99 +45,17 @@ export type EffectContext = {
 
 -- Public interface for scripts trying to use the framework
 export type Statusify = {
-	--[[
-		Returns whether a humanoid currently has the given effect active.
-	]]
-	HasEffect: (self: StatusifyInternal, args: {
-		Humanoid: Humanoid,
-		EffectName: string,
-	}) -> boolean,
-
-	--[[
-		Returns the active EffectInstance for a humanoid, or nil if it isn't active.
-	]]
-	GetActiveEffect: (
-		self: StatusifyInternal,
-		args: {
-			Humanoid: Humanoid,
-			EffectName: string,
-		}
-	) -> EffectInstance?,
-
-	--[[
-		Returns the registered EffectDefinition for the given effect name, or nil if unregistered.
-	]]
-	GetRegisteredEffect: (self: StatusifyInternal, effectName: string) -> EffectDefinition?,
-
-	--[[
-		Remove an effect status from a humanoid.
-		Use 'action' to determine how effect(s) should be removed.
-		
-		Actions:
-			remove - Remove one single effect, ignoring all stacks on it.
-			removeAll - Remove every effect from the humanoid.
-			decrement - Remove one stack of the effect. If the stack drops to 0, it will be removed automatically.
-		If the action is either "remove" or "decrement" you must specify the effectName.
-	]]
-	ClearEffect: (
-		self: StatusifyInternal,
-		args: {
-			Action: "remove" | "removeAll" | "decrement",
-			Humanoid: Humanoid,
-			EffectName: string?,
-		}
-	) -> boolean,
-
-	--[[
-		Apply an effect status onto a humanoid.
-		This effect status should be registered first before any application of it can be used!
-	]]
-	ApplyEffect: (self: StatusifyInternal, args: {
-		Humanoid: Humanoid,
-		EffectName: string,
-	}) -> boolean,
-
-	--[[
-		Unregister an effect status that will no longer be used.
-		Use 'terminate' to destroy all active instances of the effect instantly.
-	]]
-	UnregisterEffect: (
-		self: StatusifyInternal,
-		args: {
-			EffectName: string,
-			Terminate: boolean,
-		}
-	) -> boolean,
-
-	--[[
-		Register an effect status to be available for use.
-		Properties will be defaulted to a value if they're nil.
-		
-		Use a number <= 0 for Interval to disable ticking (no logic and replication for ticks)
-		Use math.huge for Duration for a permanent duration (effect is either removed when humanoid dies or manual removal)
-
-		Note: Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
-		Lower intervals cause 'OnTick' to execute more frequently and can increase CPU usage. Consider using 0.5 or 1 second(s) for effects that only need periodic updates.
-
-		Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
-	]]
-	RegisterEffect: (
-		self: StatusifyInternal,
-		args: {
-			EffectName: string,
-			Definition: EffectDefinition,
-		}
-	) -> boolean,
-
-	--[[
-		Destroys the object, releasing everything it owns.
-	]]
+	GetActive: (self: StatusifyInternal, args: { Humanoid: Humanoid, EffectName: string }) -> EffectInstance?,
+	GetRegistered: (self: StatusifyInternal, effectName: string) -> EffectDefinition?,
+	GetActiveCount: (self: StatusifyInternal, humanoid: Humanoid) -> number,
+	Apply: (self: StatusifyInternal, args: { Humanoid: Humanoid, EffectName: string }) -> boolean,
+	Unregister: (self: StatusifyInternal, args: { EffectName: string, Terminate: boolean }) -> boolean,
+	Register: (self: StatusifyInternal, args: { EffectName: string, Definition: EffectDefinition }) -> boolean,
 	Destroy: (self: StatusifyInternal) -> (),
-
-	--[[
-		Returns the number of active effects on a humanoid.
-	]]
-	GetNumberOfActiveEffects: (self: StatusifyInternal, humanoid: Humanoid) -> number,
+	Remove: (
+		self: StatusifyInternal,
+		args: { Action: "remove" | "removeAll" | "decrement", EffectName: string?, Humanoid: Humanoid }
+	) -> boolean,
 }
 
 -- Private interface for the framework to work with
