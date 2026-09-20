@@ -258,35 +258,19 @@ function Api:ApplyEffect(args: {
 		return true
 	end
 
-	local effectCount = self.ActiveEffectCounts[humanoid]
-	if not effectCount then
-		effectCount = 0
-		self.ActiveEffectCounts[humanoid] = effectCount
-	end
-
-	-- The number of stacks cannot go higher than the max allowment
-	if effectCount >= self.MaxEffectsPerHumanoid then
-		Logger.Output(
-			"warn",
-			`Attempted to apply ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxEffectsPerHumanoid}).`
-		)
-		return false
-	end
-
-	local effect: Types.EffectInstance = {
-		Name = effectName,
-		Definition = definition,
-		StartTime = now,
-		Stacks = 1,
-		NextAvailableApplyTime = now + definition.Throttle,
-		ExpireTime = now + (definition.Duration :: number),
-		NextTickTime = now + (definition.Interval :: number),
-	}
-
+	-- Create the effect and add it to the humanoid
 	return Effects.Add({
 		Self = self,
 		Humanoid = humanoid,
-		Effect = effect,
+		Effect = {
+			Name = effectName,
+			Definition = definition,
+			StartTime = now,
+			Stacks = 1,
+			NextAvailableApplyTime = now + definition.Throttle,
+			ExpireTime = now + (definition.Duration :: number),
+			NextTickTime = now + (definition.Interval :: number),
+		},
 	})
 end
 
