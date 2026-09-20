@@ -356,6 +356,7 @@ local Statusify = require(pathToStatusify.Api)
 local effectManager = Statusify.New({
     MaxNumberPerHumanoid = 5,
     RemoteEvent = nil,
+    HumanoidDirectories = nil,
 })
 ```
 
