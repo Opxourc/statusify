@@ -15,7 +15,7 @@ function Watcher.Create(self: Types.StatusifyInternal, humanoid: Humanoid): RBXS
 	-- Whenever the humanoid is being destroyed, disconnect the watcher and clean up all effects on the humanoid
 	return humanoid.Destroying:Connect(function()
 		Watcher.Destroy(self, humanoid)
-		self:ClearEffect({
+		self:Remove({
 			Action = "removeAll",
 			Humanoid = humanoid,
 		})
