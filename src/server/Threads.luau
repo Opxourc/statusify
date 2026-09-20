@@ -1,10 +1,20 @@
+--!strict
+
 const Types = require("./Types")
 const Logger = require("./Logger")
 
 local Threads = {}
-const WEAK_METATABLE = { __mode = "k" }
+const WEAK_METATABLE = { __mode = "k" } -- Used to remove values that are no longer referenced
 
-function Threads.AddToActive(args: {
+--[[
+	Adds a new thread to be ActiveThreads table for a Statusify object.
+
+	@param Self The object that will be referenced from.
+	@param Humanoid The humanoid to check from.
+	@param EffectName The effect name is hosting the thread.
+	@param Thread The thread that will be stored.
+]]
+function Threads.Add(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string,
@@ -15,16 +25,17 @@ function Threads.AddToActive(args: {
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
+	-- If the humanoid doesn't have a table, create one
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
 		activeThreads = {}
 		self.ActiveThreads[humanoid] = activeThreads
 	end
 
-	-- Create a new table if one doesn't already exist
+	-- If the effect name doesn't have a table, create one
 	local threads = activeThreads[effectName]
 	if not threads then
-		threads = setmetatable({}, WEAK_METATABLE) -- When the thread is considered "dead" and no longer referenced, GC should remove it
+		threads = setmetatable({}, WEAK_METATABLE)
 		activeThreads[effectName] = threads
 	end
 
@@ -32,65 +43,55 @@ function Threads.AddToActive(args: {
 	Logger.Output("log", `Added a thread for ({effectName}) by ({humanoid:GetFullName()}).`)
 end
 
-function Threads.CancelAllFromActive(args: {
-	Action: "cancelEffect" | "cancelAll",
+--[[
+	Cancels thread(s) so any callbacks for a effect running are cancelled.
+
+	@param Self The object that will be referenced from.
+	@param Humanoid The humanoid to cancel from.
+	@param EffectName The effect name that hosted the threads.
+]]
+function Threads.Cancel(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
-	EffectName: string?,
+	EffectName: string,
 })
 	local effectName = args.EffectName
 	local humanoid = args.Humanoid
-	local action = args.Action
 	local self = args.Self
 
-	if action == "cancelEffect" and not effectName then
-		Logger.Output(
-			"warn",
-			`Attempted to cancel threads for a specific effect status on ({humanoid:GetFullName()}) when no effect name was specified.`
-		)
-		return
-	end
-
+	-- Humanoid should have a table
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
 		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active threads to cancel.`)
 		return
 	end
 
-	if action == "cancelAll" then
-		for effectName, threads in activeThreads do
-			for thread in threads do
-				if coroutine.status(thread) ~= "dead" then
-					task.cancel(thread)
-				end
-			end
-		end
-
-		self.ActiveThreads[humanoid] = nil
-		Logger.Output("log", `Cancelled all running threads for ({humanoid:GetFullName()}).`)
-	elseif action == "cancelEffect" then
-		local threads = activeThreads[effectName]
-		if not threads then
-			Logger.Output(
-				"warn",
-				`({humanoid:GetFullName()}) doesn't have an active ({effectName}) effect to cancel threads from.`
-			)
-			return
-		end
-
-		for thread in threads do
-			if coroutine.status(thread) ~= "dead" then
-				task.cancel(thread)
-			end
-		end
-
-		threads = nil
+	-- The effect name should have a table
+	local threads = activeThreads[effectName]
+	if not threads then
 		Logger.Output(
-			"log",
-			`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
+			"warn",
+			`({humanoid:GetFullName()}) doesn't have an active ({effectName}) effect to cancel threads from.`
 		)
-	else
-		Logger.Output("warn", `Unknown action to cancel threads. Got: ({action}).`)
+		return
+	end
+
+	-- Cancel all running threads if they aren't already dead
+	for thread in threads do
+		if coroutine.status(thread) ~= "dead" then
+			task.cancel(thread)
+		end
+	end
+
+	activeThreads[effectName] = nil
+	Logger.Output(
+		"log",
+		`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
+	)
+
+	-- If the number of effects under the humanoid is 0, also nullify the humanoid entry
+	if next(activeThreads) == nil then
+		self.ActiveThreads[humanoid] = nil
 	end
 end
 

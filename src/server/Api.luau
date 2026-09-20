@@ -1,4 +1,5 @@
 --!strict
+local HeatmapQueryService = game:GetService("HeatmapQueryService")
 
 const Types = require("./Types")
 const Logger = require("./Logger")
@@ -171,22 +172,24 @@ function Api:Unregister(args: {
 
 	self.RegisteredEffects[effectName] = nil
 
+	-- Clean up this effect if terminate is true
 	if terminate then
 		for humanoid, activeEffects in self.ActiveEffects do
 			if not activeEffects[effectName] then
 				continue
 			end
 
-			Effects.Remove({
+			-- We want to cancel all threads first before removing
+			-- This is because we don't want to have OnRemove be involved with the cancellation
+			Threads.Cancel({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
 			})
 
-			Threads.CancelAllFromActive({
+			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
-				Action = "cancelEffect",
 				EffectName = effectName,
 			})
 		end
