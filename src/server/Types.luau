@@ -10,7 +10,8 @@ export type EffectDefinition = {
 	}?,
 	Throttle: number?, -- The minimal time between applications
 	MaxStacks: number?,
-	StackBehavior: "refresh" | "stack" | "ignore"?,
+	StackBehavior: "refresh" | "stack" | "ignore" | "stack_refresh"?,
+	-- stack_refresh - Increase number of stacks by 1 and refresh duration
 	-- refresh - Reset duration
 	-- stack - Increase the number of stacks by 1 unless capped
 	-- ignore - Do nothing
