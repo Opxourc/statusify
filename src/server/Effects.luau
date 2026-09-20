@@ -61,7 +61,7 @@ end
     Calls a callback function within an active effect.
 
     This callback will be ran a seperate thread so it cannot halt execution if it takes time to complete or errors.
-    
+
     If the thread is successfully created, it will be stored under the humanoid.
 ]]
 function Effects.RunCallback(args: {
@@ -118,6 +118,69 @@ function Effects.RunCallback(args: {
 	})
 end
 
+--[[
+    Adds an effect to a humanoid to make it active.
+
+    This function does not consider any stacking.
+    It only standardizes setting an effect into it's active state.
+]]
+function Effects.Add(args: {
+	Self: Types.StatusifyInternal,
+	Humanoid: Humanoid,
+	Effect: Types.EffectInstance,
+})
+	local self = args.Self
+	local humanoid = args.Humanoid
+	local effect = args.Effect
+	local effectName = effect.Name
+
+	-- If the humanoid doesn't have a table, make a new one
+	-- Also create a watcher connection since this in a new table
+	-- Another Watcher connection won't be created for this humanoid as long as this table exists
+	local activeEffects = self.ActiveEffects[humanoid]
+	if not activeEffects then
+		activeEffects = {}
+		self.ActiveEffects[humanoid] = activeEffects
+		Watcher.Create(self, humanoid)
+	end
+
+	if activeEffects[effectName] ~= nil then
+		Logger.Output("warn", `({effectName}) is already active on ({humanoid:GetFullName()}).`)
+		return false
+	end
+
+	-- The number of effects the humanoid has cannot exceed the maximum allowed
+	local effectCount = Utilities.GetActiveCount(self, humanoid)
+	if effectCount >= self.MaxEffectsPerHumanoid then
+		Logger.Output(
+			"warn",
+			`Attempted to add ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxEffectsPerHumanoid}).`
+		)
+		return false
+	end
+
+	-- Assign effect, run callback, and replicate for "apply"
+	activeEffects[effectName] = effect
+
+	Effects.RunCallback({
+		EventMessage = "apply",
+		Self = self,
+		Humanoid = humanoid,
+		Effect = effect,
+	})
+
+	Replication.Replicate({
+		Self = self,
+		Message = "apply",
+		Definition = effect.Definition,
+		Humanoid = humanoid,
+		EffectName = effectName,
+	})
+
+	Logger.Output("log", `Added ({effectName}) to ({humanoid:GetFullName()}).`)
+	return true
+end
+
 function Effects.Remove(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
@@ -148,6 +211,14 @@ function Effects.Remove(args: {
 		EffectName = effectName,
 		Definition = effect.Definition,
 	})
+
+	Effects.RunCallback({
+		EventMessage = "remove",
+		Self = self,
+		Humanoid = humanoid,
+		Effect = effect,
+	})
+
 	activeEffects[effectName] = nil
 
 	local effectCounts = self.ActiveEffectCounts[humanoid]
@@ -169,21 +240,6 @@ function Effects.Remove(args: {
 		Watcher.Destroy(self, humanoid)
 		self.ActiveEffects[humanoid] = nil
 		Logger.Output("log", `No more status effects remain for ({humanoid:GetFullName()}).`)
-	end
-
-	-- Run callback for the removal
-	if effect.Definition.OnRemove then
-		Threads.AddToActive({
-			Self = self,
-			Humanoid = humanoid,
-			EffectName = effectName,
-			Thread = task.spawn(function()
-				local ok, err = pcall(effect.Definition.OnRemove, Utilities.CreateContext(humanoid, effect))
-				if not ok then
-					Logger.Output("error", `OnRemove callback for ({effectName}) errored: ({err}).`)
-				end
-			end),
-		})
 	end
 
 	-- Threads are not cancelled here because we want them to naturally finish up

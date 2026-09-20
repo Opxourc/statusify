@@ -21,6 +21,21 @@ function Utilities.NormalizeEffectName(effectName: string): string
 	return string.lower(effectName)
 end
 
+function Utilities.GetActiveCount(self: Types.StatusifyInternal, humanoid: Humanoid)
+	local activeEffects = Utilities.GetActiveEffects({
+		Self = self,
+		Humanoid = humanoid,
+		Source = "Getting active effects count",
+	})
+
+	local count = 0
+	for _ in activeEffects do
+		count += 1
+	end
+
+	return count
+end
+
 function Utilities.GetActiveEffects(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,

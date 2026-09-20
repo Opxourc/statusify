@@ -283,24 +283,11 @@ function Api:ApplyEffect(args: {
 		NextTickTime = now + (definition.Interval :: number),
 	}
 
-	activeEffects[effectName] = effect
-	self.ActiveEffectCounts[humanoid] = math.min(effectCount + 1, self.MaxEffectsPerHumanoid)
-
-	Effects.RunCallback({
-		EventMessage = "apply",
+	return Effects.Add({
 		Self = self,
 		Humanoid = humanoid,
 		Effect = effect,
 	})
-
-	Replication.Replicate({
-		Self = self,
-		Message = "apply",
-		Definition = definition,
-		Humanoid = humanoid,
-		EffectName = effectName,
-	})
-	return true
 end
 
 function Api:ClearEffect(args: {
