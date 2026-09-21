@@ -1,3 +1,5 @@
+--!strict
+
 const RunService = game:GetService("RunService")
 
 const Replication = require("./Replication")
@@ -8,6 +10,12 @@ const Types = require("./Types")
 
 local Runtime = {}
 
+--[[
+	Creates a runtime connection that will run the lifecycle of all active effects.
+
+	@param self The object that will be referenced from.
+	@return RBXScriptConnection or nil if creation failed.
+]]
 function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 	if self.RuntimeConnection ~= nil then
 		Logger.Output("warn", "Attempted to create a new runtime connection while one already exists.")
@@ -20,7 +28,15 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 		-- Thread the callbacks because we don't know how long a callback can last for
 		-- We also don't want it to halt the entire Heartbeat connection if one errors or yields
 		for humanoid, activeEffects in self.ActiveEffects do
+			if not activeEffects then
+				continue
+			end
+
 			for effectName, effect in activeEffects do
+				if not effect then
+					continue
+				end
+
 				-- If the time expires, clean up the effect under the humanoid
 				-- Otherwise run a tick as long as tick is higher than 0
 				if now >= effect.ExpireTime then
