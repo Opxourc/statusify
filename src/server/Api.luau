@@ -1,4 +1,10 @@
 --!strict
+--[[
+	Note:
+		'self' is intended to be shadowed in these methods so 'self' can get proper type checking.
+		If the type checker complains about this shadowing, you can ignore it.
+		This won't hurt the execution of code.
+]]
 
 const Types = require("./Types")
 const Logger = require("./Logger")
@@ -26,7 +32,7 @@ function Api.New(args: {
 	local maxEffectsPerHumanoid = args.MaxEffectsPerHumanoid
 	local replicationEvent = args.ReplicationEvent
 
-	local self = setmetatable({}, Api)
+	local self = setmetatable({}, Api) :: Types.StatusifyInternal -- Type checker limitation
 
 	-- Connection that runs the lifecycle of currently running effects
 	self.RuntimeConnection = Runtime.Create(self)
@@ -52,8 +58,10 @@ end
 function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 
-	for connection in self.WatcherConnections do
-		connection:Disconnect()
+	for _, connection in self.WatcherConnections do
+		if connection then
+			connection:Disconnect()
+		end
 	end
 
 	if self.RuntimeConnection then
@@ -61,11 +69,21 @@ function Api:Destroy()
 	end
 
 	for humanoid, effects in self.ActiveEffects do
+		if not effects then
+			continue
+		end
+
 		for effectName in effects do
 			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
+			})
+
+			Threads.Cancel({
+				EffectName = effectName,
+				Humanoid = humanoid,
+				Self = self,
 			})
 		end
 	end
@@ -76,14 +94,61 @@ end
 --[[
 	Register an effect status to be available for use.
 
-	Definition:
+	Definition Properties:
+
+	- Duration: How long 'one' stack should last naturally.
+	- Interval: How fast ticks should be applied during the duration.
+	- Throttle: The minimal time between applications.
+	- MaxStacks: The maximum allowed stacks this effect can have.
+	- StackBehavior: How stacking logic should work if reapplication happens.
+	- Replicate: Which points of the lifecycle should replicate to the client.
+
+	Replicate will contain:
+
+	- Update
+	- Tick
+	- Remove
+	- Apply
+
+	These keys are valued as bools and if true, will allow replication to happen when their point in the lifetime is reached.
+	- Example:
+	OnApply called -> if Apply in Replicate is true, 'apply' event will be fired to clients.
+	
+	Definition Callbacks:
+	
+	- OnUpdate: Ran when either the stack count changes or reapplication happens.
+	- OnApply: Ran when the effect is applied for the first time.
+	- OnRemove: Ran when the effect is removed or cleared.
+	- OnTick: Ran off of the interval in ticks.
+
+	Stack Behavior:
+	
+	- "stack_refresh": Stack count is increased by one if not at max and duration is reest.
+	- "stack": stack count is increased by one.
+	- "refresh": Duration is reset.
+	- "ignore": Do nothing.
+	
+	Tips for creating a definition:
 
 	- Definition properties will be defaulted to a value if they're nil.
-	- Use a number <= 0 for Interval to disable ticking (no logic and replication for ticks)
-	- Use math.huge for Duration for a permanent duration (effect is either removed when humanoid dies or manual removal)
+	- Use a number <= 0 for Interval to disable ticking.
+	- Use math.huge for Duration for a permanent duration.
 	- Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
-	- Effect names are case insensitive, "MYEFFECT" and "myEffect" are considered the same.
+	- Effect names are case-insensitive, "MYEFFECT" and "myEffect" are considered the same.
+	- If ReplicationEvent was not provided during the construction of this object, then Replicate won't do anything even if all keys under it are 'true'.
+	- All callbacks have a EffectContext arguement called 'context' when being called. You can use this context to get more information on the active effect at that moment.
+	- If you plan to not use a callback, then don't define that specific callback. it will default to nil and won't run when the lifecycle reaches its point.
 
+	Defaults:
+
+	- Duration: 5
+	- Interval: 1
+	- Thottle: 0.25
+	- MaxStacks: math.huge
+	- StackBehavior: "stack_refresh"
+	- Replicate: true for all
+	- Callbacks: nil for all
+	
 	@param EffectName The effect name to register.
 	@param Definition The contract that contains all the callbacks and information about a status effect.
 
@@ -168,6 +233,10 @@ function Api:Unregister(args: {
 
 	if terminate then
 		for humanoid, activeEffects in self.ActiveEffects do
+			if not activeEffects then
+				continue
+			end
+
 			if not activeEffects[effectName] then
 				continue
 			end
@@ -178,7 +247,7 @@ function Api:Unregister(args: {
 				EffectName = effectName,
 			})
 
-			Threads.CancelAllFromActive({
+			Threads.Cancel({
 				Self = self,
 				Humanoid = humanoid,
 				Action = "cancelEffect",
@@ -233,9 +302,9 @@ function Api:Apply(args: {
 				Definition = definition,
 				StartTime = now,
 				Stacks = 1,
-				NextAvailableApplyTime = now + definition.Throttle,
-				ExpireTime = now + (definition.Duration :: number),
-				NextTickTime = now + (definition.Interval :: number),
+				NextAvailableApplyTime = now + definition.Throttle :: number,
+				ExpireTime = now + definition.Duration :: number,
+				NextTickTime = now + definition.Interval :: number,
 			},
 		})
 	end
@@ -275,7 +344,7 @@ function Api:Apply(args: {
 		end
 
 		if resetDuration then
-			effect.ExpireTime = now + definition.Duration
+			effect.ExpireTime = now + definition.Duration :: number
 		end
 	end
 
@@ -292,7 +361,7 @@ function Api:Apply(args: {
 		return false
 	end
 
-	effect.NextAvailableApplyTime = now + definition.Throttle -- Mutate after stack behavior is verified
+	effect.NextAvailableApplyTime = now + definition.Throttle :: number -- Mutate after stack behavior is verified
 	return true
 end
 
@@ -312,7 +381,7 @@ end
 	@return boolean whether successful.
 ]]
 function Api:Remove(args: {
-	Action: "remove" | "removeAll" | "decrement",
+	Action: "remove" | "remove_all" | "decrement",
 	EffectName: string?,
 	Humanoid: Humanoid,
 }): boolean
@@ -336,7 +405,7 @@ function Api:Remove(args: {
 		})
 
 	-- Remove all active effects from the humanoid
-	elseif action == "removeAll" then
+	elseif action == "remove_all" then
 		local activeEffects = Utilities.GetActiveEffects({
 			Self = self,
 			Humanoid = humanoid,

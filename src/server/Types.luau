@@ -1,26 +1,20 @@
 -- Describes the template for an effect
 export type EffectDefinition = {
-	Duration: number?, -- How long 'one' stack should last naturally without any interuptions
-	Interval: number?, -- How fast ticks should be applied during the duration
-	Replicate: { -- Determines what points of the lifecycle should be replicated
+	Duration: number?,
+	Interval: number?,
+	Replicate: {
 		Apply: boolean?,
 		Tick: boolean?,
 		Remove: boolean?,
 		Update: boolean?,
 	}?,
-	Throttle: number?, -- The minimal time between applications
+	Throttle: number?,
 	MaxStacks: number?,
 	StackBehavior: "refresh" | "stack" | "ignore" | "stack_refresh"?,
-	-- stack_refresh - Increase number of stacks by 1 and refresh duration
-	-- refresh - Reset duration
-	-- stack - Increase the number of stacks by 1 unless capped
-	-- ignore - Do nothing
-
-	-- Functions that step through the effect's lifecycle
-	OnApply: ((context: EffectContext) -> ())?, -- The moment an effect goes live
-	OnTick: ((context: EffectContext) -> ())?, -- When a interval strikes
-	OnRemove: ((context: EffectContext) -> ())?, -- The moment an effect is cleared
-	OnUpdate: ((context: EffectContext) -> ())?, -- When refreshes or stack values change
+	OnTick: ((context: EffectContext) -> ())?,
+	OnApply: ((context: EffectContext) -> ())?,
+	OnRemove: ((context: EffectContext) -> ())?,
+	OnUpdate: ((context: EffectContext) -> ())?,
 }
 
 -- The contract for a live effect that is running
