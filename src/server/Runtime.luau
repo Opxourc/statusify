@@ -71,4 +71,15 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 	end)
 end
 
+--[[
+	Destroys and disconnects the current runtime connection.
+	@param self The object that will be referenced from.
+]]
+function Runtime.Destroy(self: Types.StatusifyInternal)
+	if self.RuntimeConnection then
+		self.RuntimeConnection:Disconnect()
+		self.RuntimeConnection = nil
+	end
+end
+
 return table.freeze(Runtime)

@@ -49,36 +49,36 @@ function Api.New(args: {
 	self.ActiveEffects = {} -- Effects that are currently running from an effect on a humanoid
 	self.ActiveThreads = {} -- Threads that are currently running from an effect on a humanoid
 
-	Logger.Output("log", "Object created.")
+	Logger.Output("log", "Statusify object created.")
 	return self
 end
 
 --[[
 	Destroys the object, releasing everything it owns.
+	@return nil so you can reassign the object to it.
 ]]
 function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 
-	if self.RuntimeConnection then
-		self.RuntimeConnection:Disconnect()
-	end
+	Runtime.Destroy(self) -- Clean up runtime connection
 
 	for humanoid, effects in self.ActiveEffects do
-		Watcher.Destroy(self, humanoid)
+		Watcher.Destroy(self, humanoid) -- Clean up all watcher connections
 		Threads.Cancel({
 			Humanoid = humanoid,
 			Self = self,
 			Action = "all",
-		})
+		}) -- Clean up all threads
 
-		Effects.Remove({
-			Self = self,
-			Humanoid = humanoid,
-			Action = "all",
-		})
+		-- We shouldn't active effects because they don't contain any connections or threads, which is already handled
+		-- Also removal runs replication and callbacks which isn't required when destroying the object
 	end
 
-	Logger.Output("log", "Object destroyed.")
+	-- All other data should be removed by the garbage collector
+	-- As long as this object's references becomes nil
+
+	Logger.Output("log", "Statusify object destroyed.")
+	return nil
 end
 
 --[[
