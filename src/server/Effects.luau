@@ -81,16 +81,37 @@ function Effects.RunCallback(args: {
 		callbackName: string,
 		context: Types.EffectContext
 	)
-		-- we'd want this to not yield the main thread if it takes longer to complete
-		return task.spawn(function()
-			local ok, err = pcall(callback, context)
+		-- We'd want this to not yield the main thread if it takes longer to complete
+		local thread: thread
+		thread = task.spawn(function()
+			local ok, err = xpcall(callback, debug.traceback, context)
 			if not ok then
 				Logger.Output(
 					"error",
 					`({callback}) callback for ({effect.Name}) errored on ({humanoid:GetFullName()}): ({err}).`
 				)
 			end
+
+			-- Once the callback has completed
+			-- Remove this thread from the table as it will finish up
+			local activeThreads, threads, existing = Utilities.GetActiveThreads({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effect.Name,
+				Thread = thread,
+				Source = "Effects.RunCallback",
+			})
+
+			if existing then
+				threads[thread] = nil
+			end
+
+			-- Check if the number of threads for the humanoid as dropped to 0
+			threads = Utilities.NilOnEmpty(threads)
+			activeThreads = Utilities.NilOnEmpty(activeThreads)
 		end)
+
+		return thread
 	end
 
 	-- Run the callback based on EventMessage

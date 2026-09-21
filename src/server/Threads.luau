@@ -1,10 +1,10 @@
 --!strict
 
+const Utilities = require("./Utilities")
 const Types = require("./Types")
 const Logger = require("./Logger")
 
 local Threads = {}
-const WEAK_METATABLE = { __mode = "k" } -- Used to remove values that are no longer referenced
 
 --[[
 	Adds a new thread to be ActiveThreads table for a Statusify object.
@@ -35,7 +35,7 @@ function Threads.Add(args: {
 	-- If the effect name doesn't have a table, create one
 	local threads = activeThreads[effectName]
 	if not threads then
-		threads = setmetatable({}, WEAK_METATABLE)
+		threads = {}
 		activeThreads[effectName] = threads
 	end
 
@@ -89,10 +89,8 @@ function Threads.Cancel(args: {
 		`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
 	)
 
-	-- If the number of effects under the humanoid is 0, also nullify the humanoid entry
-	if next(activeThreads) == nil then
-		self.ActiveThreads[humanoid] = nil
-	end
+	-- If the number of effects under the humanoid is 0, nullify the humanoid entry
+	self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
 end
 
 return table.freeze(Threads)
