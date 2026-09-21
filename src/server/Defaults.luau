@@ -1,7 +1,10 @@
 local Defaults = {}
 
-Defaults.CD_DefaultMaxEffectsPerHumanoid = 3
-Defaults.ED_Defaults = table.freeze({
+Defaults.Constructor = {
+	MaxEffectsPerHumanoid = 3,
+}
+
+Defaults.EffectDefinition = {
 	Duration = 5,
 	Interval = 1,
 	MaxStacks = math.huge,
@@ -13,6 +16,6 @@ Defaults.ED_Defaults = table.freeze({
 		Remove = true,
 		Update = true,
 	},
-})
+}
 
 return table.freeze(Defaults)

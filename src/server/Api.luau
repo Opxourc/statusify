@@ -1,5 +1,4 @@
 --!strict
-local HeatmapQueryService = game:GetService("HeatmapQueryService")
 
 const Types = require("./Types")
 const Logger = require("./Logger")
@@ -36,7 +35,7 @@ function Api.New(args: {
 		return nil
 	end
 
-	self.MaxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.CD_DefaultMaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
+	self.MaxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
 	self.WatcherConnections = {} -- Connections that are dynamically created and destroyed to clean up humanoids
 	self.ReplicationEvent = replicationEvent -- This will be used to send replication events to clients
 	self.RegisteredEffects = {} -- These are effects that are considered valid
@@ -106,38 +105,33 @@ function Api:Register(args: {
 
 	-- Don't mutate the provided table definition directly
 	-- That behavior is not intended for this function method
+	local defaults = Defaults.EffectDefinition
 	local normalized = table.clone(definition)
-	normalized.Duration = normalized.Duration or Defaults.ED_Defaults.Duration
-	normalized.Interval = normalized.Interval or Defaults.ED_Defaults.Interval
-	normalized.Throttle = normalized.Throttle or Defaults.ED_Defaults.Throttle
-	normalized.MaxStacks = normalized.MaxStacks or Defaults.ED_Defaults.MaxStacks
-	normalized.StackBehavior = normalized.StackBehavior or Defaults.ED_Defaults.StackBehavior
 
-	if not normalized.Replicate then
+	normalized.Duration = normalized.Duration or defaults.Duration
+	normalized.Interval = normalized.Interval or defaults.Interval
+	normalized.Throttle = normalized.Throttle or defaults.Throttle
+	normalized.MaxStacks = normalized.MaxStacks or defaults.MaxStacks
+	normalized.StackBehavior = normalized.StackBehavior or defaults.StackBehavior
+
+	local replicateDefaults = defaults.Replicate
+	local replicateNormalized = normalized.Replicate
+
+	if not replicateNormalized then
 		normalized.Replicate = {
-			Apply = Defaults.ED_Defaults.Replicate.Apply,
-			Tick = Defaults.ED_Defaults.Replicate.Tick,
-			Remove = Defaults.ED_Defaults.Replicate.Remove,
+			Tick = replicateDefaults.Tick,
+			Apply = replicateDefaults.Apply,
+			Remove = replicateDefaults.Remove,
+			Update = replicateDefaults.Update,
 		}
 	else
 		-- These values can actually be false
 		-- Use a nil check instead of the 'or' inline
 		normalized.Replicate = {
-			Apply = if normalized.Replicate.Apply == nil
-				then Defaults.ED_Defaults.Replicate.Apply
-				else normalized.Replicate.Apply,
-
-			Tick = if normalized.Replicate.Tick == nil
-				then Defaults.ED_Defaults.Replicate.Tick
-				else normalized.Replicate.Tick,
-
-			Remove = if normalized.Replicate.Remove == nil
-				then Defaults.ED_Defaults.Replicate.Remove
-				else normalized.Replicate.Remove,
-
-			Update = if normalized.Replicate.Update == nil
-				then Defaults.ED_Defaults.Replicate.Update
-				else normalized.Replicate.Update,
+			Tick = if replicateNormalized.Tick == nil then replicateDefaults.Tick else replicateNormalized.Tick,
+			Apply = if replicateNormalized.Apply == nil then replicateDefaults.Apply else replicateNormalized.Apply,
+			Remove = if replicateNormalized.Remove == nil then replicateDefaults.Remove else replicateNormalized.Remove,
+			Update = if replicateNormalized.Update == nil then replicateDefaults.Update else replicateNormalized.Update,
 		}
 	end
 
@@ -172,24 +166,22 @@ function Api:Unregister(args: {
 
 	self.RegisteredEffects[effectName] = nil
 
-	-- Clean up this effect if terminate is true
 	if terminate then
 		for humanoid, activeEffects in self.ActiveEffects do
 			if not activeEffects[effectName] then
 				continue
 			end
 
-			-- We want to cancel all threads first before removing
-			-- This is because we don't want to have OnRemove be involved with the cancellation
-			Threads.Cancel({
+			Effects.Remove({
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
 			})
 
-			Effects.Remove({
+			Threads.CancelAllFromActive({
 				Self = self,
 				Humanoid = humanoid,
+				Action = "cancelEffect",
 				EffectName = effectName,
 			})
 		end
