@@ -245,7 +245,11 @@ function Effects.Remove(args: {
 	local effectName = args.EffectName
 	local action = args.Action
 
-	local function removeEffect(humanoid: Humanoid, effect: Types.EffectInstance)
+	local function removeEffect(humanoid: Humanoid, effect: Types.EffectInstance?)
+		if not effect then
+			return
+		end
+
 		-- Call the replication event first before setting nil
 		-- This is because replication is going to check the state of the effect for this humanoid again
 		Replication.Replicate({
@@ -279,7 +283,7 @@ function Effects.Remove(args: {
 			Source = "Effects.Remove",
 		})
 
-		if not (activeEffects and effect) then
+		if not activeEffects then
 			return
 		end
 
@@ -307,10 +311,6 @@ function Effects.Remove(args: {
 		-- Remove all active effects
 		-- Uses 'name' to avoi shadow
 		for name, effect in activeEffects do
-			if not effect then
-				continue
-			end
-
 			removeEffect(humanoid, effect)
 			activeEffects[name] = nil
 		end

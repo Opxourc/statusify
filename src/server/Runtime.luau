@@ -37,20 +37,22 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 					continue
 				end
 
-				-- If the time expires, clean up the effect under the humanoid
-				-- Otherwise run a tick as long as tick is higher than 0
+				-- Clean up the effect under the humanoid when time expires
 				if now >= effect.ExpireTime then
 					Effects.Remove({
 						Self = self,
 						Humanoid = humanoid,
 						EffectName = effectName,
+						Action = "effect",
 					})
 					Watcher.Destroy(self, humanoid)
+
+				-- Run a tick if the interval is greater than 0
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
 
 					Effects.RunCallback({
-						EventMessage = "tick",
+						Message = "tick",
 						Self = self,
 						Humanoid = humanoid,
 						Effect = effect,
