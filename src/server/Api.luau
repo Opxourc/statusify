@@ -8,12 +8,13 @@
 
 const Types = require("./Types")
 const Logger = require("./Logger")
+const Watcher = require("./Watcher")
 const Threads = require("./Threads")
 const Effects = require("./Effects")
+const Runtime = require("./Runtime")
 const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
-const Runtime = require("./Runtime")
 
 local Api = {}
 Api.__index = Api
@@ -58,34 +59,23 @@ end
 function Api:Destroy()
 	local self = Utilities.AnnotateSelf(self)
 
-	for _, connection in self.WatcherConnections do
-		if connection then
-			connection:Disconnect()
-		end
-	end
-
 	if self.RuntimeConnection then
 		self.RuntimeConnection:Disconnect()
 	end
 
 	for humanoid, effects in self.ActiveEffects do
+		Watcher.Destroy(self, humanoid)
 		Threads.Cancel({
 			Humanoid = humanoid,
 			Self = self,
 			Action = "all",
 		})
 
-		if not effects then
-			continue
-		end
-
-		for effectName in effects do
-			Effects.Remove({
-				Self = self,
-				Humanoid = humanoid,
-				EffectName = effectName,
-			})
-		end
+		Effects.Remove({
+			Self = self,
+			Humanoid = humanoid,
+			Action = "all",
+		})
 	end
 
 	Logger.Output("log", "Object destroyed.")
@@ -245,6 +235,7 @@ function Api:Unregister(args: {
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
+				Action = "effect",
 			})
 
 			Threads.Cancel({
@@ -294,7 +285,7 @@ function Api:Apply(args: {
 	})
 
 	if not effect then
-		return Effects.Add({
+		Effects.Add({
 			Self = self,
 			Humanoid = humanoid,
 			Effect = {
@@ -307,6 +298,8 @@ function Api:Apply(args: {
 				NextTickTime = now + definition.Interval :: number,
 			},
 		})
+
+		return true
 	end
 
 	-- When throttling, the application timing cannot be too fast
@@ -328,7 +321,7 @@ function Api:Apply(args: {
 		})
 
 		Effects.RunCallback({
-			EventMessage = "update",
+			Message = "update",
 			Self = self,
 			Effect = effect,
 			Humanoid = humanoid,
@@ -398,10 +391,16 @@ function Api:Remove(args: {
 
 	-- Remove the specific active effect from the humanoid
 	if action == "remove" then
+		if not effectName then
+			Logger.Output("warn", "")
+			return false
+		end
+
 		Effects.Remove({
 			Self = self,
 			Humanoid = humanoid,
-			EffectName = effectName :: string,
+			EffectName = effectName,
+			Action = "effect",
 		})
 
 	-- Remove all active effects from the humanoid
@@ -413,15 +412,15 @@ function Api:Remove(args: {
 			Source = "Removing all active effects",
 		})
 
-		if activeEffects then
-			for name in activeEffects do
-				Effects.Remove({
-					Self = self,
-					Humanoid = humanoid,
-					EffectName = name,
-				})
-			end
+		if not activeEffects then
+			return false
 		end
+
+		Effects.Remove({
+			Self = self,
+			Humanoid = humanoid,
+			Action = "all",
+		})
 
 	-- Decrement the stack value of the specific effect by 1
 	elseif action == "decrement" then
@@ -432,14 +431,16 @@ function Api:Remove(args: {
 			Source = "Decrementing stack count",
 		})
 
-		if effect then
-			Effects.MutateStack({
-				Self = self,
-				ApplyValue = -1,
-				Humanoid = humanoid,
-				Effect = effect,
-			})
+		if not effect then
+			return false
 		end
+
+		Effects.MutateStack({
+			Self = self,
+			ApplyValue = -1,
+			Humanoid = humanoid,
+			Effect = effect,
+		})
 	else
 		Logger.Output("warn", `Unknown action provided. Got: ({action}).`)
 		return false
