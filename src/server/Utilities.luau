@@ -127,7 +127,7 @@ function Utilities.GetActiveThreads(args: {
 	EffectName: string?,
 	Thread: thread?,
 	Source: string,
-}): ({ [string]: { [thread]: true? }? }?, { [thread]: true? }?, boolean?)
+}): ({ [string]: { [thread]: boolean? }? }?, { [thread]: boolean? }?, boolean?)
 	local self = args.Self
 	local source = args.Source
 	local thread = args.Thread

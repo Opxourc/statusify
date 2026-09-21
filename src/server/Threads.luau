@@ -71,7 +71,7 @@ function Threads.Cancel(args: {
 	local action = args.Action
 	local self = args.Self
 
-	local function cancelThreads(threadTable: { [thread]: true? }?)
+	local function cancelThreads(threadTable: { [thread]: boolean? }?)
 		if not threadTable then
 			return
 		end

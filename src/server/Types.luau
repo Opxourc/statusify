@@ -60,7 +60,7 @@ export type StatusifyInternal = Statusify & {
 	ReplicationEvent: RemoteEvent?,
 	RegisteredEffects: { [string]: EffectDefinition? },
 	ActiveEffects: { [Humanoid]: { [string]: EffectInstance? }? },
-	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true? }? }? },
+	ActiveThreads: { [Humanoid]: { [string]: { [thread]: boolean? }? }? },
 }
 
 -- Package structure to be sent over to clients
