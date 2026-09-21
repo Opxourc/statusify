@@ -32,12 +32,16 @@ function Threads.Add(args: {
 		self.ActiveThreads[humanoid] = activeThreads
 	end
 
+	assert(activeThreads ~= nil)
+
 	-- If the effect name doesn't have a table, create one
 	local threads = activeThreads[effectName]
 	if not threads then
 		threads = {}
 		activeThreads[effectName] = threads
 	end
+
+	assert(threads ~= nil)
 
 	threads[thread] = true
 	Logger.Output("log", `Added a thread for ({effectName}) by ({humanoid:GetFullName()}).`)
@@ -46,51 +50,94 @@ end
 --[[
 	Cancels thread(s) so any callbacks for a effect running are cancelled.
 
+	Actions:
+
+	- "all": All running threads under the humanoid will be cancelled.
+	- "effect": All running threads under an active effect under a humanoid will be cancelled.
+
 	@param Self The object that will be referenced from.
+	@param Action Determines how cancelling will work.
 	@param Humanoid The humanoid to cancel from.
 	@param EffectName The effect name that hosted the threads.
 ]]
 function Threads.Cancel(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
-	EffectName: string,
+	EffectName: string?,
+	Action: "all" | "effect",
 })
 	local effectName = args.EffectName
 	local humanoid = args.Humanoid
+	local action = args.Action
 	local self = args.Self
 
-	-- Humanoid should have a table
-	local activeThreads = self.ActiveThreads[humanoid]
-	if not activeThreads then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active threads to cancel.`)
-		return
-	end
+	local function cancelThreads(threadTable: { [thread]: true? }?)
+		if not threadTable then
+			return
+		end
 
-	-- The effect name should have a table
-	local threads = activeThreads[effectName]
-	if not threads then
-		Logger.Output(
-			"warn",
-			`({humanoid:GetFullName()}) doesn't have an active ({effectName}) effect to cancel threads from.`
-		)
-		return
-	end
-
-	-- Cancel all running threads if they aren't already dead
-	for thread in threads do
-		if coroutine.status(thread) ~= "dead" then
-			task.cancel(thread)
+		for thread in threadTable do
+			if coroutine.status(thread) ~= "dead" then
+				task.cancel(thread)
+			end
 		end
 	end
 
-	activeThreads[effectName] = nil
-	Logger.Output(
-		"log",
-		`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
-	)
+	-- Cancel all running under a specific active effect
+	if action == "effect" then
+		-- There should be a effect name provided if the action is "effect"
+		if not effectName then
+			Logger.Output("warn", "Attempted to cancel threads under an effect name that wasn't provided.")
+			return
+		end
 
-	-- If the number of effects under the humanoid is 0, nullify the humanoid entry
-	self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+		local activeThreads, threads = Utilities.GetActiveThreads({
+			Self = self,
+			Humanoid = humanoid,
+			EffectName = effectName,
+			Source = "Threads.Cancel (removing threads under a specific effect)",
+		})
+
+		if not activeThreads then
+			return
+		end
+
+		cancelThreads(threads)
+
+		activeThreads[effectName] = nil
+		Logger.Output(
+			"log",
+			`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
+		)
+
+		-- We don't know if that effect was the last to be removed for this humanoid
+		-- Check if there's any more effects and if there isn't set nil to the humanoid table
+		self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+
+	-- Remove all running active threads under a humanoid
+	elseif action == "all" then
+		local activeThreads = Utilities.GetActiveThreads({
+			Self = self,
+			Humanoid = humanoid,
+			Source = `Threads.Cancel (removing all threads under ({humanoid:GetFullName()}))`,
+		})
+
+		if not activeThreads then
+			return
+		end
+
+		-- Cancel all running threads if they aren't already dead
+		-- Uses 'name' to avoid shadow
+		for name, threads in activeThreads do
+			cancelThreads(threads)
+			activeThreads[name] = nil
+		end
+
+		self.ActiveThreads[humanoid] = nil
+		Logger.Output("log", `Cancelled all running threads for ({humanoid:GetFullName()}).`)
+	else
+		Logger.Output("warn", `Unknown action provided for cancelling threads. Got: ({action})`)
+	end
 end
 
 return table.freeze(Threads)

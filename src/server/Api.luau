@@ -69,6 +69,12 @@ function Api:Destroy()
 	end
 
 	for humanoid, effects in self.ActiveEffects do
+		Threads.Cancel({
+			Humanoid = humanoid,
+			Self = self,
+			Action = "all",
+		})
+
 		if not effects then
 			continue
 		end
@@ -78,12 +84,6 @@ function Api:Destroy()
 				Self = self,
 				Humanoid = humanoid,
 				EffectName = effectName,
-			})
-
-			Threads.Cancel({
-				EffectName = effectName,
-				Humanoid = humanoid,
-				Self = self,
 			})
 		end
 	end
@@ -250,7 +250,7 @@ function Api:Unregister(args: {
 			Threads.Cancel({
 				Self = self,
 				Humanoid = humanoid,
-				Action = "cancelEffect",
+				Action = "effect",
 				EffectName = effectName,
 			})
 		end
