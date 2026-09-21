@@ -1,8 +1,20 @@
+--!strict
+
+local Utilities = require("./Utilities")
 const Logger = require("./Logger")
 const Types = require("./Types")
 
 local Replication = {}
 
+--[[
+	Sends a replication event to the client with a message and packet of information so the client can do any form of replication.
+	
+	@param Definition The definition or template of an status effect.
+	@param Message The event string that the client will see to know what part of the lifecycle the event is at.
+	@param Self The object that will be referenced from.
+	@param Humanoid The humanoid that this effect is targetted towards.
+	@param EffectName The name of the effect.
+]]
 function Replication.Replicate(args: {
 	Definition: Types.EffectDefinition,
 	Message: Types.EventMessage,
@@ -21,21 +33,14 @@ function Replication.Replicate(args: {
 	local humanoid = args.Humanoid
 	local message = args.Message
 
-	local activeEffects = self.ActiveEffects[humanoid]
-	if not activeEffects then
-		Logger.Output(
-			"warn",
-			`Attempted to send a replication event for ({humanoid:GetFullName()}) when there's no active effects.`
-		)
-		return
-	end
+	local _, effect = Utilities.GetActiveEffects({
+		Humanoid = humanoid,
+		EffectName = effectName,
+		Self = self,
+		Source = "Replication.Replicate",
+	})
 
-	local effect = activeEffects[effectName]
 	if not effect then
-		Logger.Output(
-			"warn",
-			`Attempted to send a ({effect}) replication event when it's not active under ({humanoid:GetFullName()}).`
-		)
 		return
 	end
 
@@ -58,15 +63,14 @@ function Replication.Replicate(args: {
 	end
 
 	-- Only give enough information to allow the client to build whatever representation they want
-	local packet: Types.Replication = {
+	self.ReplicationEvent:FireAllClients({
 		EffectName = effectName,
 		Message = message,
 		Target = humanoid,
 		Stacks = effect.Stacks,
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
-	}
-	self.ReplicationEvent:FireAllClients(packet)
+	})
 	Logger.Output("log", `Sent ({effectName}) ({message}) replication event for ({humanoid:GetFullName()}).`)
 end
 
