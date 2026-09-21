@@ -54,19 +54,19 @@ export type Statusify = {
 	Destroy: (self: StatusifyInternal) -> (),
 	Remove: (
 		self: StatusifyInternal,
-		args: { Action: "remove" | "removeAll" | "decrement", EffectName: string?, Humanoid: Humanoid }
+		args: { Action: "remove" | "remove_all" | "decrement", EffectName: string?, Humanoid: Humanoid }
 	) -> boolean,
 }
 
 -- Private interface for the framework to work with
 export type StatusifyInternal = Statusify & {
-	WatcherConnections: { [Humanoid]: RBXScriptConnection },
-	RuntimeConnection: RBXScriptConnection,
+	WatcherConnections: { [Humanoid]: RBXScriptConnection? },
+	RuntimeConnection: RBXScriptConnection?,
 	MaxEffectsPerHumanoid: number,
-	ReplicationEvent: RemoteEvent,
-	RegisteredEffects: { [string]: EffectDefinition },
-	ActiveEffects: { [Humanoid]: { [string]: EffectInstance } },
-	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true } } },
+	ReplicationEvent: RemoteEvent?,
+	RegisteredEffects: { [string]: EffectDefinition? },
+	ActiveEffects: { [Humanoid]: { [string]: EffectInstance? }? },
+	ActiveThreads: { [Humanoid]: { [string]: { [thread]: true? }? }? },
 }
 
 -- Package structure to be sent over to clients
