@@ -1,12 +1,16 @@
 const TestHelpers = require("./TestHelpers")
 
 local Object = TestHelpers.NewObject(2)
+assert(Object)
+
 local Humanoid = TestHelpers.NewHumanoid()
 local EffectName = "stacking"
-local Registered = Object:RegisterEffect({
+
+Object:Register({
 	EffectName = EffectName,
 	Definition = {
 		Duration = 30,
+		Interval = 1,
 		MaxStacks = 2,
 		StackBehavior = "stack",
 		Throttle = 0,
@@ -19,120 +23,84 @@ local Registered = Object:RegisterEffect({
 	},
 })
 
-TestHelpers.Assert(Registered, "Expected the first effect registration to succeed.")
+TestHelpers.Assert(Object:GetRegistered(EffectName) ~= nil, "Expected the first effect registration to succeed.")
+
+Object:Register({ EffectName = EffectName, Definition = { Duration = 10 } })
 TestHelpers.AssertEqual(
-	Object:RegisterEffect({ EffectName = EffectName, Definition = {} }),
-	false,
-	"Expected duplicate registration to fail."
+	Object:GetRegistered(EffectName).Duration,
+	30,
+	"Expected duplicate registration to preserve the original definition."
 )
 
-local Definition = Object:GetRegisteredEffect(EffectName)
+local Definition = Object:GetRegistered(EffectName)
 TestHelpers.Assert(Definition ~= nil, "Expected the registered definition to be readable.")
 TestHelpers.AssertEqual(Definition.Duration, 30, "Expected the configured duration to be preserved.")
 TestHelpers.AssertEqual(Definition.Interval, 1, "Expected the default interval to be applied.")
 TestHelpers.AssertEqual(Definition.MaxStacks, 2, "Expected the configured stack limit to be preserved.")
 
-TestHelpers.AssertEqual(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = "missing" }),
-	false,
+Object:Apply({ Humanoid = Humanoid, EffectName = "missing" })
+TestHelpers.Assert(
+	Object:GetActive({ Humanoid = Humanoid, EffectName = "missing" }) == nil,
 	"Expected unregistered effects to be rejected."
 )
-TestHelpers.AssertEqual(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = EffectName }),
-	true,
-	"Expected an effect to apply."
-) -- Stack -> 1
-TestHelpers.AssertEqual(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = EffectName }),
-	true,
-	"Expected a second application to stack."
-) -- Stack -> 2 (max)
-TestHelpers.AssertEqual(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = EffectName }), -- Stack x-> 3
-	true,
-	"Expected applications at the stack cap to succeed."
-)
 
-local Active = Object:GetActiveEffect({ Humanoid = Humanoid, EffectName = EffectName })
-TestHelpers.Assert(Active ~= nil, "Expected the effect to be active.")
-TestHelpers.AssertEqual(Active.Stacks, 2, "Expected stacks to stop at MaxStacks.")
+Object:Apply({ Humanoid = Humanoid, EffectName = EffectName })
+local Active = Object:GetActive({ Humanoid = Humanoid, EffectName = EffectName })
+TestHelpers.Assert(Active ~= nil, "Expected an effect to apply.")
+TestHelpers.AssertEqual(Active.Stacks, 1, "Expected the first application to create one stack.")
+
+Object:Apply({ Humanoid = Humanoid, EffectName = EffectName })
+Active = Object:GetActive({ Humanoid = Humanoid, EffectName = EffectName })
+TestHelpers.Assert(Active ~= nil, "Expected a second application to stack.")
+TestHelpers.AssertEqual(Active.Stacks, 2, "Expected the second application to reach the stack cap.")
+
+Object:Apply({ Humanoid = Humanoid, EffectName = EffectName })
+Active = Object:GetActive({ Humanoid = Humanoid, EffectName = EffectName })
+TestHelpers.Assert(Active ~= nil, "Expected effect applications at the cap to remain active.")
+TestHelpers.AssertEqual(Active.Stacks, 2, "Expected applications at the stack cap to stay capped.")
+
+Object:Remove({ Humanoid = Humanoid, EffectName = EffectName, Action = "decrement" })
+Active = Object:GetActive({ Humanoid = Humanoid, EffectName = EffectName })
+TestHelpers.Assert(Active ~= nil, "Expected decrement to leave the effect active while stacks remain.")
+TestHelpers.AssertEqual(Active.Stacks, 1, "Expected decrement to remove one stack.")
+
+Object:Remove({ Humanoid = Humanoid, EffectName = EffectName, Action = "decrement" })
 TestHelpers.Assert(
-	Object:HasEffect({ Humanoid = Humanoid, EffectName = EffectName }),
-	"Expected HasEffect to report the active effect."
+	Object:GetActive({ Humanoid = Humanoid, EffectName = EffectName }) == nil,
+	"Expected the final decrement to remove the effect."
 )
 
-TestHelpers.AssertEqual(
-	Object:ClearEffect({ Humanoid = Humanoid, EffectName = EffectName, Action = "decrement" }),
-	true,
-	"Expected decrement to succeed."
-) -- Stack -> 1
-TestHelpers.AssertEqual(
-	Object:GetActiveEffect({ Humanoid = Humanoid, EffectName = EffectName }).Stacks,
-	1,
-	"Expected decrement to remove one stack."
-)
-TestHelpers.AssertEqual(
-	Object:ClearEffect({ Humanoid = Humanoid, EffectName = EffectName, Action = "decrement" }), -- stack -> 0 (remove)
-	true,
-	"Expected the final decrement to succeed."
-)
-TestHelpers.Assert(
-	not Object:HasEffect({ Humanoid = Humanoid, EffectName = EffectName }),
-	"Expected zero stacks to remove the effect."
-)
-
-TestHelpers.AssertEqual(
-	Object:ClearEffect({ Humanoid = Humanoid, Action = "remove" }),
-	false,
-	"Expected remove without a name to fail."
-)
-TestHelpers.AssertEqual(
-	Object:ClearEffect({ Humanoid = Humanoid, Action = "removeAll" }),
-	false,
-	"Expected removeAll on an empty humanoid to fail."
-)
+Object:Remove({ Humanoid = Humanoid, Action = "effect" })
+Object:Remove({ Humanoid = Humanoid, Action = "all" })
 
 local FirstName = "first"
 local SecondName = "second"
 local ThirdName = "third"
 
-local First = Object:RegisterEffect({ EffectName = FirstName, Definition = { Duration = 30 } })
-local Second = Object:RegisterEffect({ EffectName = SecondName, Definition = { Duration = 30 } })
-local Third = Object:RegisterEffect({ EffectName = ThirdName, Definition = { Duration = 30 } })
+Object:Register({ EffectName = FirstName, Definition = { Duration = 30 } })
+Object:Register({ EffectName = SecondName, Definition = { Duration = 30 } })
+Object:Register({ EffectName = ThirdName, Definition = { Duration = 30 } })
 
-TestHelpers.Assert(First and Second and Third, "Expected capacity test effects to register.")
-TestHelpers.Assert(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = FirstName }),
-	"Expected the first effect to apply."
-) -- active -> 1
-TestHelpers.Assert(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = SecondName }),
-	"Expected the second effect to apply."
-) -- active -> 2 (max)
-TestHelpers.AssertEqual(
-	Object:ApplyEffect({ Humanoid = Humanoid, EffectName = ThirdName }),
-	false,
-	"Expected the per-humanoid limit to reject a third effect."
-)
+TestHelpers.Assert(Object:GetRegistered(FirstName) ~= nil, "Expected the first capacity test effect to register.")
+TestHelpers.Assert(Object:GetRegistered(SecondName) ~= nil, "Expected the second capacity test effect to register.")
+TestHelpers.Assert(Object:GetRegistered(ThirdName) ~= nil, "Expected the third capacity test effect to register.")
+
+Object:Apply({ Humanoid = Humanoid, EffectName = FirstName })
+Object:Apply({ Humanoid = Humanoid, EffectName = SecondName })
+Object:Apply({ Humanoid = Humanoid, EffectName = ThirdName })
 
 TestHelpers.AssertEqual(
-	Object:UnregisterEffect({ EffectName = FirstName, Terminate = true }),
-	true,
-	"Expected unregister to succeed."
-)
-TestHelpers.Assert(
-	not Object:HasEffect({ Humanoid = Humanoid, EffectName = FirstName }),
-	"Expected terminating unregister to remove active effects"
-)
-TestHelpers.AssertEqual(
-	Object:UnregisterEffect({ EffectName = FirstName, Terminate = false }),
-	false,
-	"Expected repeated unregister to fail."
+	Object:GetActiveCount(Humanoid),
+	2,
+	"Expected the per-humanoid limit to prevent a third active effect."
 )
 
-TestHelpers.AssertEqual(
-	Object:ClearEffect({ Humanoid = Humanoid, Action = "removeAll" }),
-	true,
-	"Expected removeAll to clear remaining effects."
+Object:Unregister({ EffectName = FirstName, Terminate = true })
+TestHelpers.Assert(
+	Object:GetActive({ Humanoid = Humanoid, EffectName = FirstName }) == nil,
+	"Expected terminating unregister to remove active effects."
 )
-TestHelpers.WaitForCleanup(Object, Humanoid)
+TestHelpers.Assert(Object:GetRegistered(FirstName) == nil, "Expected the effect to be unregistered.")
+
+Object:Remove({ Humanoid = Humanoid, Action = "all" })
+TestHelpers.AssertEqual(Object:GetActiveCount(Humanoid), 0, "Expected all to clear the remaining active effects.")

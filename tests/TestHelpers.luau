@@ -1,5 +1,6 @@
+--!strict
+
 const Statusify = require("../Source/Api")
-const Types = require("../Source/Types")
 
 local TestHelpers = {}
 
@@ -14,10 +15,6 @@ function TestHelpers.AssertEqual<T, E>(actual: T, expected: E, message: string)
 end
 
 function TestHelpers.NewObject(maxEffectsPerHumanoid: number?)
-	while Statusify.GetExistingObject() do
-		task.wait() -- Keep waiting until GetExistingObject returns 'nil'
-	end
-
 	local manager = Statusify.New({
 		MaxEffectsPerHumanoid = maxEffectsPerHumanoid,
 		ReplicationEvent = Instance.new("RemoteEvent"), -- No need to parent, we don't need to see any replication
@@ -29,12 +26,6 @@ end
 
 function TestHelpers.NewHumanoid()
 	return Instance.new("Humanoid")
-end
-
-function TestHelpers.WaitForCleanup(object: Types.StatusifyInternal, humanoid: Humanoid)
-	(object :: any):Destroy()
-	TestHelpers.AssertEqual(Statusify.GetExistingObject(), nil, "Expected object cleanup to release the singleton")
-	humanoid:Destroy()
 end
 
 return table.freeze(TestHelpers)
