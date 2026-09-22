@@ -141,13 +141,11 @@ end
 	
 	@param EffectName The effect name to register.
 	@param Definition The contract that contains all the callbacks and information about a status effect.
-
-	@return boolean whether successful.
 ]]
 function Api:Register(args: {
 	EffectName: string,
 	Definition: Types.EffectDefinition,
-}): boolean
+})
 	local self = Utilities.AnnotateSelf(self)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local definition = args.Definition
@@ -155,7 +153,7 @@ function Api:Register(args: {
 	-- Can't register name if it is already registered
 	if self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to register ({effectName}) when it's already registered.`)
-		return false
+		return
 	end
 
 	-- Don't mutate the provided table definition directly
@@ -191,7 +189,6 @@ function Api:Register(args: {
 	end
 
 	self.RegisteredEffects[effectName] = normalized
-	return true
 end
 
 --[[
@@ -202,13 +199,11 @@ end
 
 	@param EffectName The effect name to unregister.
 	@param Terminate If true, the status effect will be removed for all humanoids without letting them naturally finish up.
-
-	@return boolean whether successful.
 ]]
 function Api:Unregister(args: {
 	EffectName: string,
 	Terminate: boolean,
-}): boolean
+})
 	local self = Utilities.AnnotateSelf(self)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local terminate = args.Terminate
@@ -216,18 +211,14 @@ function Api:Unregister(args: {
 	-- The effect has to be registered
 	if not self.RegisteredEffects[effectName] then
 		Logger.Output("warn", `Attempted to unregister ({effectName}) when it wasn't registered.`)
-		return false
+		return
 	end
 
 	self.RegisteredEffects[effectName] = nil
 
 	if terminate then
 		for humanoid, activeEffects in self.ActiveEffects do
-			if not activeEffects then
-				continue
-			end
-
-			if not activeEffects[effectName] then
+			if not (activeEffects and activeEffects[effectName]) then
 				continue
 			end
 
@@ -246,8 +237,6 @@ function Api:Unregister(args: {
 			})
 		end
 	end
-
-	return true
 end
 
 --[[
@@ -255,13 +244,11 @@ end
 
 	@param Humanoid The humanoid to take the new status effect.
 	@param EffectName The effect status that will be applied. This name should be registered first before being applied.
-
-	@return boolean whether successful.
 ]]
 function Api:Apply(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
-}): boolean
+})
 	local self = Utilities.AnnotateSelf(self)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local humanoid = args.Humanoid
@@ -270,7 +257,7 @@ function Api:Apply(args: {
 	local definition = self.RegisteredEffects[effectName]
 	if not definition then
 		Logger.Output("warn", `Attempted to apply unregistered effect ({effectName}) onto ({humanoid:GetFullName()}).`)
-		return false
+		return
 	end
 
 	local now = workspace:GetServerTimeNow()
@@ -298,8 +285,7 @@ function Api:Apply(args: {
 				NextTickTime = now + definition.Interval :: number,
 			},
 		})
-
-		return true
+		return
 	end
 
 	-- When throttling, the application timing cannot be too fast
@@ -308,7 +294,7 @@ function Api:Apply(args: {
 			"warn",
 			`({effectName}) for ({humanoid:GetFullName()}) was throttled. No stacking behavior was ran.`
 		)
-		return false
+		return
 	end
 
 	local function operateBehavior(mutateStack: boolean, resetDuration: boolean)
@@ -351,11 +337,9 @@ function Api:Apply(args: {
 		operateBehavior(true, true)
 	else
 		Logger.Output("warn", `Unknown stack behavior provided. Got: ({definition.StackBehavior}).`)
-		return false
 	end
 
 	effect.NextAvailableApplyTime = now + definition.Throttle :: number -- Mutate after stack behavior is verified
-	return true
 end
 
 --[[
@@ -370,14 +354,12 @@ end
 	@param Action Determines how removal should work.
 	@param EffectName The effect that will be targeted. This can be optional.
 	@param Humanoid The humanoid to check.
-
-	@return boolean whether successful.
 ]]
 function Api:Remove(args: {
 	Action: "effect" | "all" | "decrement",
 	EffectName: string?,
 	Humanoid: Humanoid,
-}): boolean
+})
 	local self = Utilities.AnnotateSelf(self)
 	local humanoid = args.Humanoid
 	local action = args.Action
@@ -386,14 +368,14 @@ function Api:Remove(args: {
 	-- A effect name should have been provided if the actions were "remove" or "decrement"
 	if (action == "effect" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
-		return false
+		return
 	end
 
 	-- Remove the specific active effect from the humanoid
 	if action == "effect" then
 		if not effectName then
 			Logger.Output("warn", "")
-			return false
+			return
 		end
 
 		Effects.Remove({
@@ -421,7 +403,7 @@ function Api:Remove(args: {
 		})
 
 		if not effect then
-			return false
+			return
 		end
 
 		Effects.MutateStack({
@@ -432,10 +414,7 @@ function Api:Remove(args: {
 		})
 	else
 		Logger.Output("warn", `Unknown action provided for effect removal behavior. Got: ({action}).`)
-		return false
 	end
-
-	return true
 end
 
 --[[

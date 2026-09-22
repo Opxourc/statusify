@@ -39,17 +39,17 @@ export type EffectContext = {
 
 -- Public interface for scripts trying to use the framework
 export type Statusify = {
-	GetActive: (self: StatusifyInternal, args: { Humanoid: Humanoid, EffectName: string }) -> EffectInstance?,
-	GetRegistered: (self: StatusifyInternal, effectName: string) -> EffectDefinition?,
-	GetActiveCount: (self: StatusifyInternal, humanoid: Humanoid) -> number,
-	Apply: (self: StatusifyInternal, args: { Humanoid: Humanoid, EffectName: string }) -> boolean,
-	Unregister: (self: StatusifyInternal, args: { EffectName: string, Terminate: boolean }) -> boolean,
-	Register: (self: StatusifyInternal, args: { EffectName: string, Definition: EffectDefinition }) -> boolean,
-	Destroy: (self: StatusifyInternal) -> (),
+	GetActive: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string }) -> EffectInstance?,
+	GetRegistered: (self: Statusify, effectName: string) -> EffectDefinition?,
+	GetActiveCount: (self: Statusify, humanoid: Humanoid) -> number,
+	Apply: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string }) -> (),
+	Unregister: (self: Statusify, args: { EffectName: string, Terminate: boolean }) -> (),
+	Register: (self: Statusify, args: { EffectName: string, Definition: EffectDefinition }) -> (),
+	Destroy: (self: Statusify) -> nil,
 	Remove: (
-		self: StatusifyInternal,
+		self: Statusify,
 		args: { Action: "effect" | "all" | "decrement", EffectName: string?, Humanoid: Humanoid }
-	) -> boolean,
+	) -> (),
 }
 
 -- Private interface for the framework to work with
