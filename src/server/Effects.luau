@@ -141,7 +141,10 @@ function Effects.RunCallback(args: {
 	elseif message == "remove" and definition.OnRemove then
 		thread = createThread(definition.OnRemove, "OnRemove")
 	else
-		Logger.Output("error", `Unknown message provided for calling status effect callback. Got: ({message}).`)
+		Logger.Output(
+			"warn",
+			`Unknown message provided for calling status effect callback or missing callback. Got: ({message}).`
+		)
 		return
 	end
 

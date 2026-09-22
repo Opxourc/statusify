@@ -48,7 +48,7 @@ export type Statusify = {
 	Destroy: (self: StatusifyInternal) -> (),
 	Remove: (
 		self: StatusifyInternal,
-		args: { Action: "remove" | "remove_all" | "decrement", EffectName: string?, Humanoid: Humanoid }
+		args: { Action: "effect" | "all" | "decrement", EffectName: string?, Humanoid: Humanoid }
 	) -> boolean,
 }
 

@@ -374,7 +374,7 @@ end
 	@return boolean whether successful.
 ]]
 function Api:Remove(args: {
-	Action: "remove" | "remove_all" | "decrement",
+	Action: "effect" | "all" | "decrement",
 	EffectName: string?,
 	Humanoid: Humanoid,
 }): boolean
@@ -384,13 +384,13 @@ function Api:Remove(args: {
 	local effectName = args.EffectName and Utilities.NormalizeEffectName(args.EffectName) or nil
 
 	-- A effect name should have been provided if the actions were "remove" or "decrement"
-	if (action == "remove" or action == "decrement") and not effectName then
+	if (action == "effect" or action == "decrement") and not effectName then
 		Logger.Output("warn", `Attempted to clear a effect when no effect name was specified.`)
 		return false
 	end
 
 	-- Remove the specific active effect from the humanoid
-	if action == "remove" then
+	if action == "effect" then
 		if not effectName then
 			Logger.Output("warn", "")
 			return false
@@ -404,18 +404,7 @@ function Api:Remove(args: {
 		})
 
 	-- Remove all active effects from the humanoid
-	elseif action == "remove_all" then
-		local activeEffects = Utilities.GetActiveEffects({
-			Self = self,
-			Humanoid = humanoid,
-			EffectName = effectName,
-			Source = "Removing all active effects",
-		})
-
-		if not activeEffects then
-			return false
-		end
-
+	elseif action == "all" then
 		Effects.Remove({
 			Self = self,
 			Humanoid = humanoid,
@@ -442,7 +431,7 @@ function Api:Remove(args: {
 			Effect = effect,
 		})
 	else
-		Logger.Output("warn", `Unknown action provided. Got: ({action}).`)
+		Logger.Output("warn", `Unknown action provided for effect removal behavior. Got: ({action}).`)
 		return false
 	end
 

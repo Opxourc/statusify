@@ -34,12 +34,14 @@ function Watcher.Create(self: Types.StatusifyInternal, humanoid: Humanoid): RBXS
 			Action = "all",
 		})
 
-		-- Destrpy watcher and remove
-		Watcher.Destroy(self, humanoid)
+		-- Cancel all active effects
 		self:Remove({
-			Action = "remove_all",
+			Action = "all",
 			Humanoid = humanoid,
 		})
+
+		-- Destrpy watcher
+		Watcher.Destroy(self, humanoid)
 	end)
 end
 
