@@ -7,6 +7,38 @@ const Utilities = require("./Utilities")
 local Effects = {}
 
 --[[
+	Returns active status effect(s) depending on provided arguements.
+
+	@param Humanoid The humanoid to get effects from.
+	@param EffectName The effect to grab effects from. This is optional.
+	@param Source What script/function within the framework is calling. This is only for informational purposes.
+
+	@return Tuple of ActiveEffects (for all under humanoid) and Effects (for effect name)).
+]]
+function Effects.GetActiveEffects(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string?,
+	}
+): ({ [string]: Types.EffectInstance? }?, Types.EffectInstance?)
+	local humanoid = args.Humanoid
+	local effectName = args.EffectName
+
+	local activeEffects = self._activeEffects[humanoid]
+	if not activeEffects then
+		return nil, nil
+	end
+
+	local effect = nil
+	if effectName then
+		effect = activeEffects[effectName]
+	end
+
+	return activeEffects, effect
+end
+
+--[[
 	Mutate the stack of an active effect.
 	
 	If the stack count drops to 0, the status effect will be removed from the humanoid.

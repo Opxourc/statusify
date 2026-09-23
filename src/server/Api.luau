@@ -23,6 +23,8 @@ Api._RunCallback = Effects.RunCallback
 Api._AddEffect = Effects.Add
 Api._RemoveEffect = Effects.Remove
 Api._Replicate = Replication.Replicate
+Api._GetActiveEffects = Effects.GetActiveEffects
+Api._GetActiveThreads = Threads.GetActiveThreads
 
 --[[
 	Constructs a new Statusify object.
