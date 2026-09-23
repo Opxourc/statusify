@@ -1,6 +1,6 @@
 --!strict
 
-local Debugging = game:GetService("RunService"):IsStudio()
+const inStudio = game:GetService("RunService"):IsStudio()
 local Logger = {}
 
 --[[
@@ -12,7 +12,7 @@ local Logger = {}
 	@param message The string message that will outputted.
 ]]
 function Logger.info(message: string)
-	if not Debugging then
+	if not inStudio then
 		return
 	end
 

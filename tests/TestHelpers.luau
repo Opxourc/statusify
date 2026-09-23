@@ -1,7 +1,6 @@
 --!strict
 
 const Statusify = require("../Source/Api")
-
 local TestHelpers = {}
 
 function TestHelpers.Assert(condition: boolean, message: string)
@@ -15,7 +14,7 @@ function TestHelpers.AssertEqual<T, E>(actual: T, expected: E, message: string)
 end
 
 function TestHelpers.NewObject(maxEffectsPerHumanoid: number?)
-	local manager = Statusify.New({
+	local manager = Statusify.new({
 		MaxEffectsPerHumanoid = maxEffectsPerHumanoid,
 		ReplicationEvent = Instance.new("RemoteEvent"), -- No need to parent, we don't need to see any replication
 	})

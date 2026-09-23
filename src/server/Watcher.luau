@@ -17,7 +17,7 @@ function Watcher.Create(self: Types.Statusify, humanoid: Humanoid)
 			Humanoid = humanoid,
 			Action = "all",
 		})
-		self:Remove({
+		self:_RemoveEffect({
 			Action = "all",
 			Humanoid = humanoid,
 		})
