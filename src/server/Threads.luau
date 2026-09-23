@@ -12,7 +12,6 @@ local Threads = {}
 	@param Humanoid The humanoid to get threads from.
 	@param EffectName The effect to grab threads from. This is optional.
 	@param Thread The specific thread to look for that's under a effect. This is optional.
-	@param Source What script/function within the framework is calling. This is only for informational purposes.
 
 	@return Tuple of ActiveThreads (for all under humanoid), Threads (for effect name), and boolean (for if the specific thread exists).
 ]]
@@ -81,7 +80,7 @@ function Threads.Add(
 	assert(threads ~= nil)
 
 	threads[thread] = true
-	Logger.Info(`Added a thread for ({effectName}) status effect by ({humanoid:GetFullName()}).`)
+	Logger.info(`Added a thread for ({effectName}) status effect by ({humanoid:GetFullName()}).`)
 end
 
 --[[
@@ -120,7 +119,7 @@ function Threads.Cancel(
 
 	if action == "effect" then
 		if not effectName then
-			Logger.Severe("Attempted to cancel a thread when an effect name wasn't provided.")
+			Logger.severe("Attempted to cancel a thread when an effect name wasn't provided.")
 			return
 		end
 
@@ -135,12 +134,11 @@ function Threads.Cancel(
 
 		cancelThreads(threads)
 		activeThreads[effectName] = nil
-		self._activeThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+		self._activeThreads[humanoid] = Utilities.nilOnEmpty(activeThreads)
 
-		Logger.Info(`Cancelled a thread under ({effectName}) status effect for ({humanoid:GetFullName()}).`)
+		Logger.info(`Cancelled a thread under ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
 		local activeThreads = self:_GetActiveThreads({
-			Self = self,
 			Humanoid = humanoid,
 		})
 
@@ -154,9 +152,9 @@ function Threads.Cancel(
 		end
 
 		self._activeThreads[humanoid] = nil
-		Logger.Info(`Cancelled all threads for ({humanoid:GetFullName()}).`)
+		Logger.info(`Cancelled all threads for ({humanoid:GetFullName()}).`)
 	else
-		Logger.Info(`Unknown action provided for cancelling threads. Got: ({action}).`)
+		Logger.info(`Unknown action provided for cancelling threads. Got: ({action}).`)
 	end
 end
 

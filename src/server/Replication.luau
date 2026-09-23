@@ -67,7 +67,7 @@ function Replication.Replicate(
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
 	})
-	Logger.Info(`Sent ({effectName}) ({message}) replication event.`)
+	Logger.info(`Sent ({effectName}) ({message}) replication event.`)
 end
 
 return Replication

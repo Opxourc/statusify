@@ -11,7 +11,7 @@ local Logger = {}
 
 	@param message The string message that will outputted.
 ]]
-function Logger.Info(message: string)
+function Logger.info(message: string)
 	if not Debugging then
 		return
 	end
@@ -27,7 +27,7 @@ end
 
 	@param message The string message that will be traced back and outputted.
 ]]
-function Logger.Severe(message: string)
+function Logger.severe(message: string)
 	local source, line = debug.info(2, "sl")
 	warn(`\n[Statusify][SEVERE]\n\nSOURCE:\n{source}:{line}\n\nTRACEBACK:\n{debug.traceback(message, 2)}`)
 end

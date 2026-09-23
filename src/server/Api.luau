@@ -53,7 +53,7 @@ function Api.new(args: {
 
 	self:_CreateRuntime()
 
-	Logger.Info("Statusify object created.")
+	Logger.info("Statusify object created.")
 	return self
 end
 
@@ -74,7 +74,7 @@ function Api.Destroy(self: Types.Statusify)
 		-- Also removal runs replication and callbacks which isn't required when destroying the object
 	end
 
-	Logger.Info("Statusify object destroyed.")
+	Logger.info("Statusify object destroyed.")
 	return nil
 end
 
@@ -146,12 +146,12 @@ function Api.Register(
 		Definition: Types.EffectDefinition,
 	}
 )
-	local effectName = Utilities.NormalizeEffectName(args.EffectName)
+	local effectName = Utilities.normalizeEffectName(args.EffectName)
 	local definition = args.Definition
 
 	-- Can't register name if it is already registered
 	if self._registeredEffects[effectName] then
-		Logger.Severe(`Attempted to register ({effectName}) effect status when it's already registered.`)
+		Logger.severe(`Attempted to register ({effectName}) effect status when it's already registered.`)
 		return
 	end
 
@@ -202,7 +202,7 @@ function Api.Unregister(
 		Terminate: boolean,
 	}
 )
-	local effectName = Utilities.NormalizeEffectName(args.EffectName)
+	local effectName = Utilities.normalizeEffectName(args.EffectName)
 	local terminate = args.Terminate
 
 	if not self._registeredEffects[effectName] then
@@ -243,12 +243,12 @@ function Api.Apply(
 		EffectName: string,
 	}
 )
-	local effectName = Utilities.NormalizeEffectName(args.EffectName)
+	local effectName = Utilities.normalizeEffectName(args.EffectName)
 	local humanoid = args.Humanoid
 
 	local definition = self._registeredEffects[effectName]
 	if not definition then
-		Logger.Severe(`Attempted to apply ({effectName}) effect status despite not being registered.`)
+		Logger.severe(`Attempted to apply ({effectName}) effect status despite not being registered.`)
 		return
 	end
 
@@ -313,7 +313,7 @@ function Api.Apply(
 	elseif definition.StackBehavior == "stack_refresh" then
 		operateBehavior(true, true)
 	else
-		Logger.Severe(`Unknown stack behavior in definition. Got: ({definition.StackBehavior}).`)
+		Logger.severe(`Unknown stack behavior in definition. Got: ({definition.StackBehavior}).`)
 	end
 
 	effect.NextAvailableApplyTime = now + definition.Throttle :: number
@@ -342,10 +342,10 @@ function Api.Remove(
 )
 	local humanoid = args.Humanoid
 	local action = args.Action
-	local effectName = args.EffectName and Utilities.NormalizeEffectName(args.EffectName) or nil
+	local effectName = args.EffectName and Utilities.normalizeEffectName(args.EffectName) or nil
 
 	if (action == "effect" or action == "decrement") and not effectName then
-		Logger.Severe(`Attempted removal behavior for a effect status when no effect name was specified.`)
+		Logger.severe(`Attempted removal behavior for a effect status when no effect name was specified.`)
 		return
 	end
 
@@ -376,7 +376,7 @@ function Api.Remove(
 			Effect = effect,
 		})
 	else
-		Logger.Severe(`Unknown action provided for status effect removal behavior. Got ({action}).`)
+		Logger.severe(`Unknown action provided for status effect removal behavior. Got ({action}).`)
 	end
 end
 
@@ -387,7 +387,7 @@ end
 	@return EffectDefinition or nil if not found.
 ]]
 function Api.GetRegistered(self: Types.Statusify, effectName: string): Types.EffectDefinition?
-	return self._registeredEffects[Utilities.NormalizeEffectName(effectName)]
+	return self._registeredEffects[Utilities.normalizeEffectName(effectName)]
 end
 
 --[[
@@ -406,9 +406,8 @@ function Api.GetActive(
 	}
 ): Types.EffectInstance?
 	local _, effect = self:_GetActiveEffects({
-		EffectName = Utilities.NormalizeEffectName(args.EffectName),
+		EffectName = Utilities.normalizeEffectName(args.EffectName),
 		Humanoid = args.Humanoid,
-		Self = self,
 	})
 
 	return effect

@@ -11,7 +11,7 @@ local Utilities = {}
 
 	@return Types.EffectContext of created context.
 ]]
-function Utilities.CreateContext(humanoid: Humanoid, effect: Types.EffectInstance): Types.EffectContext
+function Utilities.createContext(humanoid: Humanoid, effect: Types.EffectInstance): Types.EffectContext
 	return {
 		Target = humanoid,
 		Stacks = effect.Stacks,
@@ -27,22 +27,22 @@ end
 	@param effectName The effect name string to normalize.
 	@return string of the normalized name.
 ]]
-function Utilities.NormalizeEffectName(effectName: string): string
+function Utilities.normalizeEffectName(effectName: string): string
 	return string.lower(effectName)
 end
 
 --[[
 	Returns a nil value for if the provided table has no entries.
 
-	@param checkTab The table that will be checked.
+	@param t The table that will be checked.
 	@return table or nil depending on the conditions result.
 ]]
-function Utilities.NilOnEmpty<T, E>(tab: { [T]: E }): { [T]: E }?
-	if next(tab) == nil then
+function Utilities.nilOnEmpty<T, E>(t: { [T]: E }): { [T]: E }?
+	if next(t) == nil then
 		return nil
 	end
 
-	return tab
+	return t
 end
 
 return table.freeze(Utilities)

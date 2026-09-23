@@ -11,7 +11,6 @@ local Effects = {}
 
 	@param Humanoid The humanoid to get effects from.
 	@param EffectName The effect to grab effects from. This is optional.
-	@param Source What script/function within the framework is calling. This is only for informational purposes.
 
 	@return Tuple of ActiveEffects (for all under humanoid) and Effects (for effect name)).
 ]]
@@ -71,7 +70,7 @@ function Effects.MutateStack(
 		})
 	end
 
-	Logger.Info(
+	Logger.info(
 		`({effect.Name}) status effect for ({humanoid:GetFullName()}) updated. (Stack: {previous} -> {subsequent}).`
 	)
 end
@@ -103,8 +102,8 @@ function Effects.RunCallback(
 		local thread: thread
 		thread = task.spawn(function()
 			xpcall(callback, function(err)
-				Logger.Severe(`({message}) callback for ({effect.Name}) ran into a problem. (Error: {err}).`)
-			end, Utilities.CreateContext(humanoid, effect))
+				Logger.severe(`({message}) callback for ({effect.Name}) ran into a problem. (Error: {err}).`)
+			end, Utilities.createContext(humanoid, effect))
 
 			-- Self clean up when callback has returned
 			local activeThreads, threads, existing = self:_GetActiveThreads({
@@ -121,8 +120,8 @@ function Effects.RunCallback(
 				threads[thread] = nil
 			end
 
-			activeThreads[effect.Name] = Utilities.NilOnEmpty(threads)
-			self._activeThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+			activeThreads[effect.Name] = Utilities.nilOnEmpty(threads)
+			self._activeThreads[humanoid] = Utilities.nilOnEmpty(activeThreads)
 		end)
 
 		return thread
@@ -138,7 +137,7 @@ function Effects.RunCallback(
 	elseif message == "remove" and definition.OnRemove then
 		thread = createThread(definition.OnRemove)
 	else
-		Logger.Severe(`Either missing callback function or unknown message related to callback. (Got: {message}).`)
+		Logger.severe(`Either missing callback function or unknown message related to callback. (Got: {message}).`)
 		return
 	end
 
@@ -196,7 +195,7 @@ function Effects.Add(
 		EffectName = effectName,
 	})
 
-	Logger.Info(`Added ({effectName}) status effect for ({humanoid:GetFullName()}).`)
+	Logger.info(`Added ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 end
 
 --[[
@@ -243,7 +242,7 @@ function Effects.Remove(
 
 	if action == "effect" then
 		if not effectName then
-			Logger.Severe("Attempted to remove a status effect when an effect name wasn't provided.")
+			Logger.severe("Attempted to remove a status effect when an effect name wasn't provided.")
 			return
 		end
 
@@ -258,17 +257,16 @@ function Effects.Remove(
 
 		process(humanoid, effect)
 		activeEffects[effectName] = nil
-		self._activeEffects[humanoid] = Utilities.NilOnEmpty(activeEffects)
+		self._activeEffects[humanoid] = Utilities.nilOnEmpty(activeEffects)
 
 		if not self._activeEffects[humanoid] then
 			self:_DestroyWatcher(humanoid)
 		end
 
-		Logger.Info(`Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
+		Logger.info(`Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
 		local activeEffects = self:_GetActiveEffects({
 			Humanoid = humanoid,
-			Source = "Effects.Remove",
 		})
 
 		if not activeEffects then
@@ -283,9 +281,9 @@ function Effects.Remove(
 		self._activeEffects[humanoid] = nil
 		self:_DestroyWatcher(humanoid)
 
-		Logger.Info(`Removed all status effects for ({humanoid:GetFullName()}).`)
+		Logger.info(`Removed all status effects for ({humanoid:GetFullName()}).`)
 	else
-		Logger.Info(`Unknown action provided for removing effects. (Got {action}).`)
+		Logger.info(`Unknown action provided for removing effects. (Got {action}).`)
 	end
 end
 
