@@ -1,6 +1,5 @@
 --!strict
 
-local Utilities = require("./Utilities")
 const Logger = require("./Logger")
 const Types = require("./Types")
 

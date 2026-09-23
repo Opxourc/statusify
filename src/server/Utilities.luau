@@ -32,46 +32,21 @@ function Utilities.NormalizeEffectName(effectName: string): string
 end
 
 --[[
-	Returns the count of active effects for a given humanoid.
+	Returns active status effect(s) depending on provided arguements.
 
-	@param self The object that will be referenced from.
-	@param humanoid The humanoid to check the count of.
-
-	@return number that represents the count.
-]]
-function Utilities.GetActiveCount(self: Types.Statusify, humanoid: Humanoid): number
-	local activeEffects = Utilities.GetActiveEffects({
-		Self = self,
-		Humanoid = humanoid,
-		Source = "Getting active effects count",
-	})
-
-	local count = 0
-	if activeEffects then
-		for _ in activeEffects do
-			count += 1
-		end
-	end
-
-	return count
-end
-
---[[
-	Returns active effect(s) depending on provided arguements.
-
-	@param Self The object that will be referenced from.
 	@param Humanoid The humanoid to get effects from.
 	@param EffectName The effect to grab effects from. This is optional.
 	@param Source What script/function within the framework is calling. This is only for informational purposes.
 
 	@return Tuple of ActiveEffects (for all under humanoid) and Effects (for effect name)).
 ]]
-function Utilities.GetActiveEffects(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string?,
-}): ({ [string]: Types.EffectInstance? }?, Types.EffectInstance?)
-	local self = args.Self
+function Utilities.GetActiveEffects(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string?,
+	}
+): ({ [string]: Types.EffectInstance? }?, Types.EffectInstance?)
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
@@ -91,7 +66,6 @@ end
 --[[
 	Returns active thread(s) depending on provided arguements.
 
-	@param Self The object that will be referenced from.
 	@param Humanoid The humanoid to get threads from.
 	@param EffectName The effect to grab threads from. This is optional.
 	@param Thread The specific thread to look for that's under a effect. This is optional.
@@ -99,13 +73,14 @@ end
 
 	@return Tuple of ActiveThreads (for all under humanoid), Threads (for effect name), and boolean (for if the specific thread exists).
 ]]
-function Utilities.GetActiveThreads(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string?,
-	Thread: thread?,
-}): ({ [string]: { [thread]: boolean? }? }?, { [thread]: boolean? }?, boolean?)
-	local self = args.Self
+function Utilities.GetActiveThreads(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string?,
+		Thread: thread?,
+	}
+): ({ [string]: { [thread]: boolean? }? }?, { [thread]: boolean? }?, boolean?)
 	local thread = args.Thread
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
