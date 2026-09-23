@@ -1,28 +1,25 @@
--- This is a demostration ServerScript for the Statusify framework.
--- Use this as a reference for how the server might use and register effects for the framework!
+--!strict
 
--- You can delete this script if this is in production
 if not game:GetService("RunService"):IsStudio() then
 	script:Destroy()
 end
 
-const RemoteEvent = game:GetService("ReplicatedStorage")
+const remoteEvent = game:GetService("ReplicatedStorage")
 	:WaitForChild("Remotes")
 	:WaitForChild("Statusify")
 	:WaitForChild("DemoReplication")
-const SharedNames = require("@game/ReplicatedStorage/Shared/Statusify/Names")
+const sharedNames = require("@game/ReplicatedStorage/Shared/Statusify/Names")
 const Statusify = require("./Source/Api")
 
 -- Construct the object
-local Object = Statusify.New({
+local object = Statusify.new({
 	MaxNumberPerHumanoid = 5,
-	ReplicationEvent = RemoteEvent,
+	ReplicationEvent = remoteEvent,
 })
 
 -- Register the desired effect and provide a definition
-const BaseDamage = 5
-Object:RegisterEffect({
-	EffectName = SharedNames.Burn,
+object:Register({
+	EffectName = sharedNames.Burn,
 	Definition = {
 		Duration = 10,
 		Interval = 1,
@@ -31,47 +28,42 @@ Object:RegisterEffect({
 
 		-- Use the context that's given to know more about the effect
 		OnApply = function(context)
-			context.Target:TakeDamage(BaseDamage)
+			context.Target:TakeDamage(5)
 		end,
 
 		OnTick = function(context)
-			context.Target:TakeDamage(BaseDamage * context.Stacks) -- Here we multiply the damage based on number of stacks
+			context.Target:TakeDamage(5 * context.Stacks) -- Multiply the damage based on number of stacks
 		end,
 
 		-- OnRemove is not needed as we don't wanna do anything when this effect is removed.
 		-- OnUpdate is not needed because we don't want to do anything if reapplication happens or stack count changes
 
-		-- Even though those callbacks are voided, we can use the Replicate key to determine whether we want to still replicate effects to the client
+		-- Callbacks can be nil but we can optionally continue to replicate or not without needing a callback
 		Replicate = {
-			Apply = true,
-			Tick = false,
-
-			-- Even though OnRemove and OnUpdate are nil, we still will replicate to the client for them
-			Remove = true,
+			Apply = true, -- Callback exists and we still want to replicate to client
+			Tick = false, -- Callback exists but we're not replicating to client
+			Remove = true, -- Callback doesn't exist but we still wanna replicate to client
 			Update = true,
 		},
 	},
 })
 
--- Effect is now registered, let's use it on our character!
-task.wait(3) -- Player may or may not be fully loaded in
+task.wait(3)
 
-local FirstPlayer = game:GetService("Players"):GetPlayers()[1]
-local Humanoid = FirstPlayer.Character and FirstPlayer.Character:WaitForChild("Humanoid")
-if Humanoid and Humanoid:IsA("Humanoid") then
-	Object:ApplyEffect({
-		EffectName = SharedNames.Burn,
-		Humanoid = Humanoid,
+local firstPlayer = game:GetService("Players"):GetPlayers()[1]
+local humanoid = firstPlayer.Character and firstPlayer.Character:WaitForChild("Humanoid")
+if humanoid and humanoid:IsA("Humanoid") then
+	object:Apply({
+		EffectName = sharedNames.Burn,
+		Humanoid = humanoid,
 	}) -- One stack
+
 	task.wait(5)
-	Object:ApplyEffect({
-		Humanoid = Humanoid,
-		EffectName = SharedNames.Burn,
+
+	object:Apply({
+		Humanoid = humanoid,
+		EffectName = sharedNames.Burn,
 	}) -- Two stacks
 
-	-- Because Burn is already applied, on the second application an 'update' replication/callback will be used instead
+	-- Because Burn is already applied, on the second application, an 'update' replication/callback will be used instead
 end
-
--- That's the end of the server-side demo!
--- You can expand on this drastically to create very complex systems that leverage Statusify!
--- Hope you enjoy :)
