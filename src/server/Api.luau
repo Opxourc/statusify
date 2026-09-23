@@ -16,6 +16,8 @@ Api._CreateWatcher = Watcher.Create
 Api._DestroyWatcher = Watcher.Destroy
 Api._AddThread = Threads.Add
 Api._CancelThread = Threads.Cancel
+Api._CreateRuntime = Runtime.Create
+Api._DestroyRuntime = Runtime.Destroy
 
 --[[
 	Constructs a new Statusify object.

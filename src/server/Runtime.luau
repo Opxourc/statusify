@@ -8,14 +8,10 @@ local Runtime = {}
 
 --[[
 	Creates a runtime connection that will run the lifecycle of all active effects.
-
-	@param self The object that will be referenced from.
-	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Runtime.Create(self: Types.Statusify): RBXScriptConnection
-	Runtime.Destroy(self)
-
-	return game:GetService("RunService").Heartbeat:Connect(function()
+function Runtime.Create(self: Types.Statusify)
+	self:_DestroyRuntime()
+	self._runtimeConnection = game:GetService("RunService").Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()
 		for humanoid, activeEffects in self._activeEffects do
 			if not activeEffects then
@@ -57,7 +53,6 @@ end
 
 --[[
 	Destroys and disconnects the current runtime connection.
-	@param self The object that will be referenced from.
 ]]
 function Runtime.Destroy(self: Types.Statusify)
 	if self._runtimeConnection then

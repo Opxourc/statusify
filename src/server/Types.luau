@@ -52,6 +52,8 @@ export type Statusify = {
 	_DestroyWatcher: (self: Statusify, humanoid: Humanoid) -> (),
 	_AddThread: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string, Thread: thread }) -> (),
 	_CancelThread: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string?, Action: "all" | "effect" }) -> (),
+	_CreateRuntime: (self: Statusify) -> (),
+	_DestroyRuntime: (self: Statusify) -> (),
 
 	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
 	_runtimeConnection: RBXScriptConnection?,
