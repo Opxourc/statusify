@@ -83,11 +83,9 @@ function Threads.Cancel(
 			return
 		end
 
-		local activeThreads, threads = Utilities.GetActiveThreads({
-			Self = self,
+		local activeThreads, threads = self:_GetActiveThreads({
 			Humanoid = humanoid,
 			EffectName = effectName,
-			Source = "Threads.Cancel (removing threads under a specific effect)",
 		})
 
 		if not activeThreads then
@@ -100,10 +98,9 @@ function Threads.Cancel(
 
 		Logger.Info(`Cancelled a thread under ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
-		local activeThreads = Utilities.GetActiveThreads({
+		local activeThreads = self:_GetActiveThreads({
 			Self = self,
 			Humanoid = humanoid,
-			Source = `Threads.Cancel (removing all threads under ({humanoid:GetFullName()}))`,
 		})
 
 		if not activeThreads then

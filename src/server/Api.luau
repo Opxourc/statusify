@@ -251,9 +251,8 @@ function Api.Apply(
 	end
 
 	local now = workspace:GetServerTimeNow()
-	local _, effect = Utilities.GetActiveEffects({
+	local _, effect = self:_GetActiveEffects({
 		EffectName = effectName,
-		Self = self,
 		Humanoid = humanoid,
 	})
 
@@ -360,8 +359,7 @@ function Api.Remove(
 			Action = "all",
 		})
 	elseif action == "decrement" then
-		local _, effect = Utilities.GetActiveEffects({
-			Self = self,
+		local _, effect = self:_GetActiveEffects({
 			Humanoid = humanoid,
 			EffectName = effectName,
 		})
@@ -405,7 +403,7 @@ function Api.GetActive(
 		EffectName: string,
 	}
 ): Types.EffectInstance?
-	local _, effect = Utilities.GetActiveEffects({
+	local _, effect = self:_GetActiveEffects({
 		EffectName = Utilities.NormalizeEffectName(args.EffectName),
 		Humanoid = args.Humanoid,
 		Self = self,
@@ -415,13 +413,24 @@ function Api.GetActive(
 end
 
 --[[
-	Returns the count of active running effects for a given humanoid.
+	Returns the count of active running status effects for a given humanoid.
 
 	@param humanoid The Humanoid to check.
-	@return Number for the count.
+	@return number that represents the count.
 ]]
 function Api.GetActiveCount(self: Types.Statusify, humanoid: Humanoid): number
-	return Utilities.GetActiveCount(self, humanoid)
+	local activeEffects = self:_GetActiveEffects({
+		Humanoid = humanoid,
+	})
+
+	local count = 0
+	if activeEffects then
+		for _ in activeEffects do
+			count += 1
+		end
+	end
+
+	return count
 end
 
 return table.freeze(Api)

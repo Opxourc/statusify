@@ -62,6 +62,14 @@ export type Statusify = {
 		self: Statusify,
 		args: { Definition: EffectDefinition, Message: EventMessage, Humanoid: Humanoid, EffectName: string }
 	) -> (),
+	_GetActiveEffects: (
+		self: Statusify,
+		args: { Humanoid: Humanoid, EffectName: string? }
+	) -> ({ [string]: EffectInstance? }?, EffectInstance?),
+	_GetActiveThreads: (
+		self: Statusify,
+		args: { Humanoid: Humanoid, EffectName: string?, Thread: thread? }
+	) -> ({ [string]: { [thread]: boolean? }? }?, { [thread]: boolean? }?, boolean?),
 
 	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
 	_runtimeConnection: RBXScriptConnection?,

@@ -75,8 +75,7 @@ function Effects.RunCallback(
 			end, Utilities.CreateContext(humanoid, effect))
 
 			-- Self clean up when callback has returned
-			local activeThreads, threads, existing = Utilities.GetActiveThreads({
-				Self = self,
+			local activeThreads, threads, existing = self:_GetActiveThreads({
 				Humanoid = humanoid,
 				EffectName = effect.Name,
 				Thread = thread,
@@ -147,7 +146,7 @@ function Effects.Add(
 		return
 	end
 
-	local effectCount = Utilities.GetActiveCount(self, humanoid)
+	local effectCount = self:GetActiveCount(humanoid)
 	if effectCount >= self._maxEffectsPerHumanoid then
 		return
 	end
@@ -216,11 +215,9 @@ function Effects.Remove(
 			return
 		end
 
-		local activeEffects, effect = Utilities.GetActiveEffects({
-			Self = self,
+		local activeEffects, effect = self:_GetActiveEffects({
 			Humanoid = humanoid,
 			EffectName = effectName,
-			Source = "Effects.Remove",
 		})
 
 		if not activeEffects then
@@ -237,8 +234,7 @@ function Effects.Remove(
 
 		Logger.Info(`Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
-		local activeEffects = Utilities.GetActiveEffects({
-			Self = self,
+		local activeEffects = self:_GetActiveEffects({
 			Humanoid = humanoid,
 			Source = "Effects.Remove",
 		})

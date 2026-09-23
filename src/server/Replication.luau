@@ -34,11 +34,9 @@ function Replication.Replicate(
 	local humanoid = args.Humanoid
 	local message = args.Message
 
-	local _, effect = Utilities.GetActiveEffects({
+	local _, effect = self:_GetActiveEffects({
 		Humanoid = humanoid,
 		EffectName = effectName,
-		Self = self,
-		Source = "Replication.Replicate",
 	})
 
 	if not effect then
