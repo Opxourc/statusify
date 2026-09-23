@@ -12,6 +12,8 @@ const Replication = require("./Replication")
 
 local Api = {}
 Api.__index = Api
+Api._CreateWatcher = Watcher.Create
+Api._DestroyWatcher = Watcher.Destroy
 
 --[[
 	Constructs a new Statusify object.
@@ -21,7 +23,7 @@ Api.__index = Api
 
 	@return Statusify object.
 ]]
-function Api.New(args: {
+function Api.new(args: {
 	MaxEffectsPerHumanoid: number?,
 	ReplicationEvent: RemoteEvent?,
 }): Types.Statusify
@@ -49,7 +51,7 @@ end
 function Api.Destroy(self: Types.Statusify)
 	Runtime.Destroy(self)
 	for humanoid, effects in self._activeEffects do
-		Watcher.Destroy(self, humanoid)
+		self:_DestroyWatcher(humanoid)
 		Threads.Cancel({
 			Humanoid = humanoid,
 			Self = self,

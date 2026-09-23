@@ -3,7 +3,6 @@
 const Types = require("./Types")
 const Logger = require("./Logger")
 const Threads = require("./Threads")
-const Watcher = require("./Watcher")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
 
@@ -152,7 +151,7 @@ function Effects.Add(args: {
 	if not activeEffects then
 		activeEffects = {}
 		self._activeEffects[humanoid] = activeEffects
-		Watcher.Create(self, humanoid)
+		self:_CreateWatcher(humanoid)
 	end
 	assert(activeEffects)
 
@@ -249,7 +248,7 @@ function Effects.Remove(args: {
 		self._activeEffects[humanoid] = Utilities.NilOnEmpty(activeEffects)
 
 		if not self._activeEffects[humanoid] then
-			Watcher.Destroy(self, humanoid)
+			self:_DestroyWatcher(humanoid)
 		end
 
 		Logger.Info(`Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
@@ -270,7 +269,7 @@ function Effects.Remove(args: {
 		end
 
 		self._activeEffects[humanoid] = nil
-		Watcher.Destroy(self, humanoid)
+		self:_DestroyWatcher(humanoid)
 
 		Logger.Info(`Removed all status effects for ({humanoid:GetFullName()}).`)
 	else

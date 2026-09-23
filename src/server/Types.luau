@@ -48,6 +48,9 @@ export type Statusify = {
 		args: { Action: "effect" | "all" | "decrement", EffectName: string?, Humanoid: Humanoid }
 	) -> (),
 
+	_CreateWatcher: (self: Statusify, humanoid: Humanoid) -> (),
+	_DestroyWatcher: (self: Statusify, humanoid: Humanoid) -> (),
+
 	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
 	_runtimeConnection: RBXScriptConnection?,
 	_maxEffectsPerHumanoid: number,

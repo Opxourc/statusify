@@ -15,11 +15,10 @@ local Watcher = {}
 
 	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Watcher.Create(self: Types.Statusify, humanoid: Humanoid): RBXScriptConnection
-	Watcher.Destroy(self, humanoid)
-
-	return humanoid.Destroying:Connect(function()
-		Watcher.Destroy(self, humanoid)
+function Watcher.Create(self: Types.Statusify, humanoid: Humanoid)
+	self:_DestroyWatcher(humanoid)
+	self._watcherConnections[humanoid] = humanoid.Destroying:Connect(function()
+		self:_DestroyWatcher(humanoid)
 		Threads.Cancel({
 			Self = self,
 			Humanoid = humanoid,
