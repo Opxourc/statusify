@@ -34,7 +34,6 @@ function Effects.MutateStack(args: {
 	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
 	local subsequent = effect.Stacks
 
-	-- Stack value changed so call "update" replication
 	Replication.Replicate({
 		Self = self,
 		Humanoid = humanoid,
@@ -43,8 +42,6 @@ function Effects.MutateStack(args: {
 		Definition = effect.Definition,
 	})
 
-	-- If the stack count drops to 0
-	-- Remove the effect from the humanoid
 	if effect.Stacks == 0 then
 		Effects.Remove({
 			Self = self,
@@ -52,15 +49,10 @@ function Effects.MutateStack(args: {
 			EffectName = effect.Name,
 			Action = "effect",
 		})
-		Logger.Output(
-			"log",
-			`({effect.Name}) status effect stack value for ({humanoid:GetFullName()}) dropped 0. Effect was removed.`
-		)
 	end
 
-	Logger.Output(
-		"log",
-		`Mutated ({effect.Name}) status effect stack for ({humanoid:GetFullName()}) to ({previous} -> {subsequent}).`
+	Logger.Info(
+		`({effect.Name}) status effect for ({humanoid:GetFullName()}) updated. (Stack: {previous} -> {subsequent}).`
 	)
 end
 
@@ -87,68 +79,50 @@ function Effects.RunCallback(args: {
 	local humanoid = args.Humanoid
 	local definition = effect.Definition
 
-	local function removeThread(thread: thread)
-		local activeThreads, threads, existing = Utilities.GetActiveThreads({
-			Self = self,
-			Humanoid = humanoid,
-			EffectName = effect.Name,
-			Thread = thread,
-			Source = "Effects.RunCallback",
-		})
-
-		if not (threads and activeThreads) then
-			return
-		end
-
-		if existing then
-			threads[thread] = nil
-		end
-
-		-- Check if the number of threads for the humanoid as dropped to 0
-		activeThreads[effect.Name] = Utilities.NilOnEmpty(threads)
-		self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
-	end
-
-	local function createThread(callback: (context: Types.EffectContext) -> (), callbackName: string)
-		-- We'd want this to not yield the main thread if it takes longer to complete
-		-- All callbacks should get a context, providing information on the active effect
-		local context = Utilities.CreateContext(humanoid, effect)
-
+	local function createThread(callback: (context: Types.EffectContext) -> ())
 		local thread: thread
 		thread = task.spawn(function()
-			-- If the callback hits a problem, log it so and trace it so you know where to look
 			xpcall(callback, function(err)
-				Logger.Output("warn", `({message}) callback for ({effect.Name}) ran into a problem.`)
-				Logger.Output("warn", `Traceback: ({debug.traceback(tostring(err))})`)
-			end, context)
+				Logger.Severe(`({message}) callback for ({effect.Name}) ran into a problem. (Error: {err}).`)
+			end, Utilities.CreateContext(humanoid, effect))
 
-			-- Once the callback has completed
-			-- Remove this thread from the table as it will finish up
-			removeThread(thread)
+			-- Self clean up when callback has returned
+			local activeThreads, threads, existing = Utilities.GetActiveThreads({
+				Self = self,
+				Humanoid = humanoid,
+				EffectName = effect.Name,
+				Thread = thread,
+			})
+
+			if not (threads and activeThreads) then
+				return
+			end
+
+			if existing then
+				threads[thread] = nil
+			end
+
+			activeThreads[effect.Name] = Utilities.NilOnEmpty(threads)
+			self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
 		end)
 
 		return thread
 	end
 
-	-- Run the callback based on EventMessage
 	local thread = nil
 	if message == "apply" and definition.OnApply then
-		thread = createThread(definition.OnApply, "OnApply")
+		thread = createThread(definition.OnApply)
 	elseif message == "tick" and definition.OnTick then
-		thread = createThread(definition.OnTick, "OnTick")
+		thread = createThread(definition.OnTick)
 	elseif message == "update" and definition.OnUpdate then
-		thread = createThread(definition.OnUpdate, "OnApply")
+		thread = createThread(definition.OnUpdate)
 	elseif message == "remove" and definition.OnRemove then
-		thread = createThread(definition.OnRemove, "OnRemove")
+		thread = createThread(definition.OnRemove)
 	else
-		Logger.Output(
-			"warn",
-			`Unknown message provided for calling status effect callback or missing callback. Got: ({message}).`
-		)
+		Logger.Severe(`Either missing callback function or unknown message related to callback. (Got: {message}).`)
 		return
 	end
 
-	-- Store thread if it was successfully created
 	Threads.Add({
 		Self = self,
 		Humanoid = humanoid,
@@ -174,43 +148,30 @@ function Effects.Add(args: {
 	local effect = args.Effect
 	local effectName = effect.Name
 
-	-- If the humanoid doesn't have a table, make a new one
-	-- Also create a watcher connection since this in a new table
-	-- Another Watcher connection won't be created for this humanoid as long as this table exists
 	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
 		activeEffects = {}
 		self.ActiveEffects[humanoid] = activeEffects
 		Watcher.Create(self, humanoid)
 	end
-
 	assert(activeEffects)
 
 	if activeEffects[effectName] ~= nil then
-		Logger.Output("warn", `({effectName}) is already active on ({humanoid:GetFullName()}).`)
 		return
 	end
 
-	-- The number of effects the humanoid has cannot exceed the maximum allowed
 	local effectCount = Utilities.GetActiveCount(self, humanoid)
 	if effectCount >= self.MaxEffectsPerHumanoid then
-		Logger.Output(
-			"warn",
-			`Attempted to add ({effectName}) onto ({humanoid:GetFullName()}) but it already has the maximum number of effects of ({self.MaxEffectsPerHumanoid}).`
-		)
 		return
 	end
 
-	-- Assign effect, run callback, and replicate for "apply"
 	activeEffects[effectName] = effect
-
 	Effects.RunCallback({
 		Message = "apply",
 		Self = self,
 		Humanoid = humanoid,
 		Effect = effect,
 	})
-
 	Replication.Replicate({
 		Self = self,
 		Message = "apply",
@@ -219,11 +180,11 @@ function Effects.Add(args: {
 		EffectName = effectName,
 	})
 
-	Logger.Output("log", `Added ({effectName}) to ({humanoid:GetFullName()}).`)
+	Logger.Info(`Added ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 end
 
 --[[
-	Removes active effect(s) so they're no considered active on a humanoid.
+	Removes active effect(s) so they're no longer considered active on a humanoid.
 
 	Threads are not cancelled during the removal process.
 
@@ -248,34 +209,27 @@ function Effects.Remove(args: {
 	local effectName = args.EffectName
 	local action = args.Action
 
-	local function removeEffect(humanoid: Humanoid, effect: Types.EffectInstance?)
-		if not effect then
-			return
+	local function process(humanoid: Humanoid, effect: Types.EffectInstance?)
+		if effect then
+			Replication.Replicate({
+				Self = self,
+				Humanoid = humanoid,
+				Message = "remove",
+				EffectName = effect.Name,
+				Definition = effect.Definition,
+			})
+			Effects.RunCallback({
+				Message = "remove",
+				Self = self,
+				Humanoid = humanoid,
+				Effect = effect,
+			})
 		end
-
-		-- Call the replication event first before setting nil
-		-- This is because replication is going to check the state of the effect for this humanoid again
-		Replication.Replicate({
-			Self = self,
-			Humanoid = humanoid,
-			Message = "remove",
-			EffectName = effect.Name,
-			Definition = effect.Definition,
-		})
-
-		Effects.RunCallback({
-			Message = "remove",
-			Self = self,
-			Humanoid = humanoid,
-			Effect = effect,
-		})
 	end
 
-	-- Remove a specific active effect
 	if action == "effect" then
-		-- There shoul dn effect name provided if the action is "effect"
 		if not effectName then
-			Logger.Output("warn", "Attempted to remove active effect when an effect name wasn't provided.")
+			Logger.Severe("Attempted to remove a status effect when an effect name wasn't provided.")
 			return
 		end
 
@@ -290,16 +244,15 @@ function Effects.Remove(args: {
 			return
 		end
 
-		removeEffect(humanoid, effect)
-
+		process(humanoid, effect)
 		activeEffects[effectName] = nil
-		Logger.Output("log", `Removed ({effectName}) from ({humanoid:GetFullName()}).`)
-
-		-- We don't know if that effect was the last to be removed for this humanoid
-		-- Check if there's any more effects and if there isn't set nil to the humanoid table
 		self.ActiveEffects[humanoid] = Utilities.NilOnEmpty(activeEffects)
 
-	-- Remove all active effects under a humanoid
+		if not self.ActiveEffects[humanoid] then
+			Watcher.Destroy(self, humanoid)
+		end
+
+		Logger.Info(`Removed ({effectName}) status effect from ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
 		local activeEffects = Utilities.GetActiveEffects({
 			Self = self,
@@ -311,17 +264,17 @@ function Effects.Remove(args: {
 			return
 		end
 
-		-- Remove all active effects
-		-- Uses 'name' to avoi shadow
 		for name, effect in activeEffects do
-			removeEffect(humanoid, effect)
+			process(humanoid, effect)
 			activeEffects[name] = nil
 		end
 
 		self.ActiveEffects[humanoid] = nil
-		Logger.Output("log", `Removed all active effects for ({humanoid:GetFullName()}).`)
+		Watcher.Destroy(self, humanoid)
+
+		Logger.Info(`Removed all status effects for ({humanoid:GetFullName()}).`)
 	else
-		Logger.Output("warn", `Unknown action provided for removing effects. Got ({action})`)
+		Logger.Info(`Unknown action provided for removing effects. (Got {action}).`)
 	end
 end
 

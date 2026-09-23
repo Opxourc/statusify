@@ -1,6 +1,5 @@
 --!strict
 
-const Logger = require("./Logger")
 const Types = require("./Types")
 const Threads = require("./Threads")
 
@@ -16,32 +15,20 @@ local Watcher = {}
 
 	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Watcher.Create(self: Types.StatusifyInternal, humanoid: Humanoid): RBXScriptConnection?
-	if self.WatcherConnections[humanoid] then
-		Logger.Output(
-			"warn",
-			`Attempted to create new watcher connection for ({humanoid:GetFullName()}) when it already exist.`
-		)
-		return nil
-	end
+function Watcher.Create(self: Types.StatusifyInternal, humanoid: Humanoid): RBXScriptConnection
+	Watcher.Destroy(self, humanoid)
 
-	-- Whenever the humanoid is being destroyed, clean up the humanoid
 	return humanoid.Destroying:Connect(function()
-		-- Cancel all threads
+		Watcher.Destroy(self, humanoid)
 		Threads.Cancel({
 			Self = self,
 			Humanoid = humanoid,
 			Action = "all",
 		})
-
-		-- Cancel all active effects
 		self:Remove({
 			Action = "all",
 			Humanoid = humanoid,
 		})
-
-		-- Destrpy watcher
-		Watcher.Destroy(self, humanoid)
 	end)
 end
 
@@ -53,13 +40,10 @@ end
 ]]
 function Watcher.Destroy(self: Types.StatusifyInternal, humanoid: Humanoid)
 	local connection = self.WatcherConnections[humanoid]
-	if not connection then
-		Logger.Output("warn", `There's no watcher connection to disconnect for ({humanoid:GetFullName()}).`)
-		return
+	if connection then
+		connection:Disconnect()
+		self.WatcherConnections[humanoid] = nil
 	end
-
-	connection:Disconnect()
-	self.WatcherConnections[humanoid] = nil
 end
 
 return table.freeze(Watcher)

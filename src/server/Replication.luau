@@ -8,6 +8,8 @@ local Replication = {}
 
 --[[
 	Sends a replication event to the client with a message and packet of information so the client can do any form of replication.
+
+	If there's no ReplicationEvent, no replication event will be sent.
 	
 	@param Definition The definition or template of an status effect.
 	@param Message The event string that the client will see to know what part of the lifecycle the event is at.
@@ -22,7 +24,6 @@ function Replication.Replicate(args: {
 	Humanoid: Humanoid,
 	EffectName: string,
 })
-	-- If there's no ReplicationEvent, then replication is not gonna be used
 	local self = args.Self
 	if not self.ReplicationEvent then
 		return
@@ -44,7 +45,6 @@ function Replication.Replicate(args: {
 		return
 	end
 
-	-- Replication is determined by the definition of the effect
 	local shouldReplicate = false
 	if definition.Replicate then
 		if message == "apply" and definition.Replicate.Apply then
@@ -62,7 +62,6 @@ function Replication.Replicate(args: {
 		return
 	end
 
-	-- Only give enough information to allow the client to build whatever representation they want
 	self.ReplicationEvent:FireAllClients({
 		EffectName = effectName,
 		Message = message,
@@ -71,7 +70,7 @@ function Replication.Replicate(args: {
 		StartTime = effect.StartTime,
 		ExpireTime = effect.ExpireTime,
 	})
-	Logger.Output("log", `Sent ({effectName}) ({message}) replication event for ({humanoid:GetFullName()}).`)
+	Logger.Info(`Sent ({effectName}) ({message}) replication event.`)
 end
 
 return Replication

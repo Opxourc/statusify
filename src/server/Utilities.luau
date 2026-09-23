@@ -1,8 +1,6 @@
 --!strict
 
-const Logger = require("./Logger")
 const Types = require("./Types")
-
 local Utilities = {}
 
 --[[
@@ -82,29 +80,19 @@ function Utilities.GetActiveEffects(args: {
 	Self: Types.StatusifyInternal,
 	Humanoid: Humanoid,
 	EffectName: string?,
-	Source: string,
 }): ({ [string]: Types.EffectInstance? }?, Types.EffectInstance?)
 	local self = args.Self
-	local source = args.Source
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
 	local activeEffects = self.ActiveEffects[humanoid]
 	if not activeEffects then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active effects. (For: {source}).`)
 		return nil, nil
 	end
 
-	-- If any EffectName was provided, also search for that
 	local effect = nil
 	if effectName then
 		effect = activeEffects[effectName]
-		if not effect then
-			Logger.Output(
-				"warn",
-				`({humanoid:GetFullName()}) doesn't have a active ({effectName}) effect. (For: {source}).`
-			)
-		end
 	end
 
 	return activeEffects, effect
@@ -126,42 +114,25 @@ function Utilities.GetActiveThreads(args: {
 	Humanoid: Humanoid,
 	EffectName: string?,
 	Thread: thread?,
-	Source: string,
 }): ({ [string]: { [thread]: boolean? }? }?, { [thread]: boolean? }?, boolean?)
 	local self = args.Self
-	local source = args.Source
 	local thread = args.Thread
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
-		Logger.Output("warn", `({humanoid:GetFullName()}) doesn't have any active threads. (For: {source}).`)
 		return nil, nil, nil
 	end
 
 	local threads = nil
 	local found = nil
 
-	-- If effect name was provided, search for that
 	if effectName then
 		threads = activeThreads[effectName]
-		if not threads then
-			Logger.Output(
-				"warn",
-				`({humanoid:GetFullName()}) doesn't have a active ({effectName}) effect. (For: {source}).`
-			)
-		end
 
-		-- If a specific thread was provided, also search for that
 		if thread and threads then
 			found = threads[thread]
-			if not found then
-				Logger.Output(
-					"warn",
-					`({humanoid:GetFullName()}) doesn't have a specified thread under ({effectName}). (For: {source}).`
-				)
-			end
 		end
 	end
 

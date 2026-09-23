@@ -1,11 +1,7 @@
 --!strict
 
-const RunService = game:GetService("RunService")
-
 const Replication = require("./Replication")
-const Watcher = require("./Watcher")
 const Effects = require("./Effects")
-const Logger = require("./Logger")
 const Types = require("./Types")
 
 local Runtime = {}
@@ -16,17 +12,11 @@ local Runtime = {}
 	@param self The object that will be referenced from.
 	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
-	if self.RuntimeConnection ~= nil then
-		Logger.Output("warn", "Attempted to create a new runtime connection while one already exists.")
-		return nil
-	end
+function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection
+	Runtime.Destroy(self)
 
-	return RunService.Heartbeat:Connect(function()
+	return game:GetService("RunService").Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()
-
-		-- Thread the callbacks because we don't know how long a callback can last for
-		-- We also don't want it to halt the entire Heartbeat connection if one errors or yields
 		for humanoid, activeEffects in self.ActiveEffects do
 			if not activeEffects then
 				continue
@@ -37,7 +27,6 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 					continue
 				end
 
-				-- Clean up the effect under the humanoid when time expires
 				if now >= effect.ExpireTime then
 					Effects.Remove({
 						Self = self,
@@ -45,19 +34,14 @@ function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection?
 						EffectName = effectName,
 						Action = "effect",
 					})
-					Watcher.Destroy(self, humanoid)
-
-				-- Run a tick if the interval is greater than 0
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
-
 					Effects.RunCallback({
 						Message = "tick",
 						Self = self,
 						Humanoid = humanoid,
 						Effect = effect,
 					})
-
 					Replication.Replicate({
 						Self = self,
 						Definition = effect.Definition,

@@ -25,26 +25,22 @@ function Threads.Add(args: {
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
-	-- If the humanoid doesn't have a table, create one
 	local activeThreads = self.ActiveThreads[humanoid]
 	if not activeThreads then
 		activeThreads = {}
 		self.ActiveThreads[humanoid] = activeThreads
 	end
-
 	assert(activeThreads ~= nil)
 
-	-- If the effect name doesn't have a table, create one
 	local threads = activeThreads[effectName]
 	if not threads then
 		threads = {}
 		activeThreads[effectName] = threads
 	end
-
 	assert(threads ~= nil)
 
 	threads[thread] = true
-	Logger.Output("log", `Added a thread for ({effectName}) by ({humanoid:GetFullName()}).`)
+	Logger.Info(`Added a thread for ({effectName}) status effect by ({humanoid:GetFullName()}).`)
 end
 
 --[[
@@ -72,22 +68,18 @@ function Threads.Cancel(args: {
 	local self = args.Self
 
 	local function cancelThreads(threadTable: { [thread]: boolean? }?)
-		if not threadTable then
-			return
-		end
-
-		for thread in threadTable do
-			if coroutine.status(thread) ~= "dead" then
-				task.cancel(thread)
+		if threadTable then
+			for thread in threadTable do
+				if coroutine.status(thread) ~= "dead" then
+					task.cancel(thread)
+				end
 			end
 		end
 	end
 
-	-- Cancel all running under a specific active effect
 	if action == "effect" then
-		-- There should be a effect name provided if the action is "effect"
 		if not effectName then
-			Logger.Output("warn", "Attempted to cancel threads under an effect name that wasn't provided.")
+			Logger.Severe("Attempted to cancel a thread when an effect name wasn't provided.")
 			return
 		end
 
@@ -103,18 +95,10 @@ function Threads.Cancel(args: {
 		end
 
 		cancelThreads(threads)
-
 		activeThreads[effectName] = nil
-		Logger.Output(
-			"log",
-			`Cancelled all running threads for the ({effectName}) status effect for ({humanoid:GetFullName()}).`
-		)
-
-		-- We don't know if that effect was the last to be removed for this humanoid
-		-- Check if there's any more effects and if there isn't set nil to the humanoid table
 		self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
 
-	-- Remove all running active threads under a humanoid
+		Logger.Info(`Cancelled a thread under ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
 		local activeThreads = Utilities.GetActiveThreads({
 			Self = self,
@@ -126,17 +110,15 @@ function Threads.Cancel(args: {
 			return
 		end
 
-		-- Cancel all running threads if they aren't already dead
-		-- Uses 'name' to avoid shadow
 		for name, threads in activeThreads do
 			cancelThreads(threads)
 			activeThreads[name] = nil
 		end
 
 		self.ActiveThreads[humanoid] = nil
-		Logger.Output("log", `Cancelled all running threads for ({humanoid:GetFullName()}).`)
+		Logger.Info(`Cancelled all threads for ({humanoid:GetFullName()}).`)
 	else
-		Logger.Output("warn", `Unknown action provided for cancelling threads. Got: ({action})`)
+		Logger.Info(`Unknown action provided for cancelling threads. Got: ({action}).`)
 	end
 end
 
