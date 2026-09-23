@@ -10,21 +10,22 @@ const Defaults = require("./Defaults")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
 
-local Api = {}
+local Api = {
+	_CreateWatcher = Watcher.Create,
+	_DestroyWatcher = Watcher.Destroy,
+	_AddThread = Threads.Add,
+	_CancelThread = Threads.Cancel,
+	_CreateRuntime = Runtime.Create,
+	_DestroyRuntime = Runtime.Destroy,
+	_MutateStack = Effects.MutateStack,
+	_RunCallback = Effects.RunCallback,
+	_AddEffect = Effects.Add,
+	_RemoveEffect = Effects.Remove,
+	_Replicate = Replication.Replicate,
+	_GetActiveEffects = Effects.GetActiveEffects,
+	_GetActiveThreads = Threads.GetActiveThreads,
+}
 Api.__index = Api
-Api._CreateWatcher = Watcher.Create
-Api._DestroyWatcher = Watcher.Destroy
-Api._AddThread = Threads.Add
-Api._CancelThread = Threads.Cancel
-Api._CreateRuntime = Runtime.Create
-Api._DestroyRuntime = Runtime.Destroy
-Api._MutateStack = Effects.MutateStack
-Api._RunCallback = Effects.RunCallback
-Api._AddEffect = Effects.Add
-Api._RemoveEffect = Effects.Remove
-Api._Replicate = Replication.Replicate
-Api._GetActiveEffects = Effects.GetActiveEffects
-Api._GetActiveThreads = Threads.GetActiveThreads
 
 --[[
 	Constructs a new Statusify object.
@@ -41,15 +42,17 @@ function Api.new(args: {
 	local maxEffectsPerHumanoid = args.MaxEffectsPerHumanoid
 	local replicationEvent = args.ReplicationEvent
 
-	local self = (setmetatable({}, Api) :: any) :: Types.Statusify
-
-	self._maxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
-	self._replicationEvent = replicationEvent -- This will be used to send replication events to clients
-	self._watcherConnections = {} -- Connections that are dynamically created and destroyed to clean up humanoids
-	self._registeredEffects = {} -- These are effects that are considered valid
-	self._activeEffects = {} -- Effects that are currently running from an effect on a humanoid
-	self._activeThreads = {} -- Threads that are currently running from an effect on a humanoid
-	self._runtimeConnection = nil -- Connection that runs the lifecycle of currently running effects
+	local self = (
+		setmetatable({
+			_maxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid, -- The max number of effects a humanoid can take at a moment
+			_replicationEvent = replicationEvent, -- This will be used to send replication events to clients
+			_watcherConnections = {}, -- Connections that are dynamically created and destroyed to clean up humanoids
+			_registeredEffects = {}, -- These are effects that are considered valid
+			_activeEffects = {}, -- Effects that are currently running from an effect on a humanoid
+			_activeThreads = {}, -- Threads that are currently running from an effect on a humanoid
+			_runtimeConnection = nil, -- Connection that runs the lifecycle of currently running effects
+		}, Api) :: any
+	) :: Types.Statusify
 
 	self:_CreateRuntime()
 
