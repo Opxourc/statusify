@@ -28,7 +28,7 @@ function Api.New(args: {
 	local maxEffectsPerHumanoid = args.MaxEffectsPerHumanoid
 	local replicationEvent = args.ReplicationEvent
 
-	local self = Utilities.AnnotateSelf(setmetatable({}, Api))
+	local self = (setmetatable({}, Api) :: any) :: Types.Statusify
 
 	self._maxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid -- The max number of effects a humanoid can take at a moment
 	self._runtimeConnection = Runtime.Create(self) -- Connection that runs the lifecycle of currently running effects
@@ -46,9 +46,7 @@ end
 	Destroys the object, releasing everything it owns.
 	@return nil so you can reassign the object to it.
 ]]
-function Api:Destroy()
-	local self = Utilities.AnnotateSelf(self)
-
+function Api.Destroy(self: Types.Statusify)
 	Runtime.Destroy(self)
 	for humanoid, effects in self._activeEffects do
 		Watcher.Destroy(self, humanoid)
@@ -127,11 +125,13 @@ end
 	@param EffectName The effect name to register.
 	@param Definition The contract that contains all the callbacks and information about a status effect.
 ]]
-function Api:Register(args: {
-	EffectName: string,
-	Definition: Types.EffectDefinition,
-})
-	local self = Utilities.AnnotateSelf(self)
+function Api.Register(
+	self: Types.Statusify,
+	args: {
+		EffectName: string,
+		Definition: Types.EffectDefinition,
+	}
+)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local definition = args.Definition
 
@@ -181,11 +181,13 @@ end
 	@param EffectName The effect name to unregister.
 	@param Terminate If true, the status effect will be removed for all humanoids without letting them naturally finish up.
 ]]
-function Api:Unregister(args: {
-	EffectName: string,
-	Terminate: boolean,
-})
-	local self = Utilities.AnnotateSelf(self)
+function Api.Unregister(
+	self: Types.Statusify,
+	args: {
+		EffectName: string,
+		Terminate: boolean,
+	}
+)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local terminate = args.Terminate
 
@@ -222,11 +224,13 @@ end
 	@param Humanoid The humanoid to take the new status effect.
 	@param EffectName The effect status that will be applied. This name should be registered first before being applied.
 ]]
-function Api:Apply(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-})
-	local self = Utilities.AnnotateSelf(self)
+function Api.Apply(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string,
+	}
+)
 	local effectName = Utilities.NormalizeEffectName(args.EffectName)
 	local humanoid = args.Humanoid
 
@@ -321,12 +325,14 @@ end
 	@param EffectName The effect that will be targeted. This can be optional.
 	@param Humanoid The humanoid to check.
 ]]
-function Api:Remove(args: {
-	Action: "effect" | "all" | "decrement",
-	EffectName: string?,
-	Humanoid: Humanoid,
-})
-	local self = Utilities.AnnotateSelf(self)
+function Api.Remove(
+	self: Types.Statusify,
+	args: {
+		Action: "effect" | "all" | "decrement",
+		EffectName: string?,
+		Humanoid: Humanoid,
+	}
+)
 	local humanoid = args.Humanoid
 	local action = args.Action
 	local effectName = args.EffectName and Utilities.NormalizeEffectName(args.EffectName) or nil
@@ -377,8 +383,8 @@ end
 	@param effectName The effect's name that will be checked for registeration.
 	@return EffectDefinition or nil if not found.
 ]]
-function Api:GetRegistered(effectName: string): Types.EffectDefinition?
-	return Utilities.AnnotateSelf(self)._registeredEffects[Utilities.NormalizeEffectName(effectName)]
+function Api.GetRegistered(self: Types.Statusify, effectName: string): Types.EffectDefinition?
+	return self._registeredEffects[Utilities.NormalizeEffectName(effectName)]
 end
 
 --[[
@@ -389,14 +395,17 @@ end
 
 	@return EffectInstance or nil if not found.
 ]]
-function Api:GetActive(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-}): Types.EffectInstance?
+function Api.GetActive(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string,
+	}
+): Types.EffectInstance?
 	local _, effect = Utilities.GetActiveEffects({
 		EffectName = Utilities.NormalizeEffectName(args.EffectName),
 		Humanoid = args.Humanoid,
-		Self = Utilities.AnnotateSelf(self),
+		Self = self,
 	})
 
 	return effect
@@ -408,8 +417,8 @@ end
 	@param humanoid The Humanoid to check.
 	@return Number for the count.
 ]]
-function Api:GetActiveCount(humanoid: Humanoid): number
-	return Utilities.GetActiveCount(Utilities.AnnotateSelf(self), humanoid)
+function Api.GetActiveCount(self: Types.Statusify, humanoid: Humanoid): number
+	return Utilities.GetActiveCount(self, humanoid)
 end
 
 return table.freeze(Api)

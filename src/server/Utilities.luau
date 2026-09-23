@@ -4,16 +4,6 @@ const Types = require("./Types")
 local Utilities = {}
 
 --[[
-	Returns an asserted table as Types.StatusifyInternal.
-
-	@param a A table that will be asserted. This should be 'self' or a Statusify object that's missing proper type checking.
-	@return Asserted Types.StatusifyInternal.
-]]
-function Utilities.AnnotateSelf(a: any)
-	return a :: Types.Statusify
-end
-
---[[
 	Creates a context that callbacks can use.
 
 	@param humanoid The humanoid who will be the target of this context.
