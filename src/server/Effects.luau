@@ -128,16 +128,24 @@ function Effects.RunCallback(
 	end
 
 	local thread = nil
-	if message == "apply" and definition.OnApply then
-		thread = createThread(definition.OnApply)
-	elseif message == "tick" and definition.OnTick then
-		thread = createThread(definition.OnTick)
-	elseif message == "update" and definition.OnUpdate then
-		thread = createThread(definition.OnUpdate)
-	elseif message == "remove" and definition.OnRemove then
-		thread = createThread(definition.OnRemove)
+	if message == "apply" then
+		if definition.OnApply then
+			thread = createThread(definition.OnApply)
+		end
+	elseif message == "tick" then
+		if definition.OnTick then
+			thread = createThread(definition.OnTick)
+		end
+	elseif message == "update" then
+		if definition.OnUpdate then
+			thread = createThread(definition.OnUpdate)
+		end
+	elseif message == "remove" then
+		if definition.OnRemove then
+			thread = createThread(definition.OnRemove)
+		end
 	else
-		Logger.severe(`Either missing callback function or unknown message related to callback. (Got: {message}).`)
+		Logger.severe(`Unknown message related to callback. (Got: {message}).`)
 		return
 	end
 

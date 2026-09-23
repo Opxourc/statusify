@@ -30,8 +30,8 @@ Api.__index = Api
 --[[
 	Constructs a new Statusify object.
 
-	@param MaxEffectsPerHumanoid - The maximum number of effects a humanoid can have active. Defaults to 3 if not provided.
-	@param ReplicatedEvent - For replicating messages to the client to visually show effects and states. Replication won't happen if this is nil.
+	@param MaxEffectsPerHumanoid The maximum number of effects a humanoid can have active. Defaults to 3 if not provided.
+	@param ReplicationEvent For replicating messages to the client to visually show effects and states. Replication won't happen if this is nil.
 
 	@return Statusify object.
 ]]
