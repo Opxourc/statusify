@@ -54,6 +54,10 @@ export type Statusify = {
 	_CancelThread: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string?, Action: "all" | "effect" }) -> (),
 	_CreateRuntime: (self: Statusify) -> (),
 	_DestroyRuntime: (self: Statusify) -> (),
+	_MutateStack: (self: Statusify, args: { Effect: EffectInstance, Humanoid: Humanoid, ApplyValue: number }) -> (),
+	_RunCallback: (self: Statusify, args: { Effect: EffectInstance, Message: EventMessage, Humanoid: Humanoid }) -> (),
+	_AddEffect: (self: Statusify, args: { Humanoid: Humanoid, Effect: EffectInstance }) -> (),
+	_RemoveEffect: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string?, Action: "all" | "effect" }) -> (),
 
 	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
 	_runtimeConnection: RBXScriptConnection?,

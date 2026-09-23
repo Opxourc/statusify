@@ -18,6 +18,10 @@ Api._AddThread = Threads.Add
 Api._CancelThread = Threads.Cancel
 Api._CreateRuntime = Runtime.Create
 Api._DestroyRuntime = Runtime.Destroy
+Api._MutateStack = Effects.MutateStack
+Api._RunCallback = Effects.RunCallback
+Api._AddEffect = Effects.Add
+Api._RemoveEffect = Effects.Remove
 
 --[[
 	Constructs a new Statusify object.
@@ -209,8 +213,7 @@ function Api.Unregister(
 				continue
 			end
 
-			Effects.Remove({
-				Self = self,
+			self:_RemoveEffect({
 				Humanoid = humanoid,
 				EffectName = effectName,
 				Action = "effect",
@@ -254,8 +257,7 @@ function Api.Apply(
 	})
 
 	if not effect then
-		Effects.Add({
-			Self = self,
+		self:_AddEffect({
 			Humanoid = humanoid,
 			Effect = {
 				Name = effectName,
@@ -282,16 +284,14 @@ function Api.Apply(
 			Definition = definition,
 			Humanoid = humanoid,
 		})
-		Effects.RunCallback({
+		self:_RunCallback({
 			Message = "update",
-			Self = self,
 			Effect = effect,
 			Humanoid = humanoid,
 		})
 
 		if mutateStack then
-			Effects.MutateStack({
-				Self = self,
+			self:_MutateStack({
 				Humanoid = humanoid,
 				Effect = effect,
 				ApplyValue = 1,
@@ -349,15 +349,13 @@ function Api.Remove(
 	end
 
 	if action == "effect" then
-		Effects.Remove({
-			Self = self,
+		self:_RemoveEffect({
 			Humanoid = humanoid,
 			EffectName = effectName,
 			Action = "effect",
 		})
 	elseif action == "all" then
-		Effects.Remove({
-			Self = self,
+		self:_RemoveEffect({
 			Humanoid = humanoid,
 			Action = "all",
 		})
@@ -372,8 +370,7 @@ function Api.Remove(
 			return
 		end
 
-		Effects.MutateStack({
-			Self = self,
+		self:_MutateStack({
 			ApplyValue = -1,
 			Humanoid = humanoid,
 			Effect = effect,

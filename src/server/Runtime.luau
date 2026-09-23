@@ -1,7 +1,6 @@
 --!strict
 
 const Replication = require("./Replication")
-const Effects = require("./Effects")
 const Types = require("./Types")
 
 local Runtime = {}
@@ -24,17 +23,15 @@ function Runtime.Create(self: Types.Statusify)
 				end
 
 				if now >= effect.ExpireTime then
-					Effects.Remove({
-						Self = self,
+					self:_RemoveEffect({
 						Humanoid = humanoid,
 						EffectName = effectName,
 						Action = "effect",
 					})
 				elseif effect.Definition.Interval and effect.Definition.Interval > 0 and now >= effect.NextTickTime then
 					effect.NextTickTime = now + effect.Definition.Interval
-					Effects.RunCallback({
+					self:_RunCallback({
 						Message = "tick",
-						Self = self,
 						Humanoid = humanoid,
 						Effect = effect,
 					})

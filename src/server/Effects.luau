@@ -12,18 +12,18 @@ local Effects = {}
 	
 	If the stack count drops to 0, the status effect will be removed from the humanoid.
 
-	@param Self The object that will be referenced from.
 	@param Effect The effect instance that will be mutated.
 	@param Humanoid The humanoid that has this effect active.
 	@param ApplyValue The application value to apply to the stacks, not the final value.
 ]]
-function Effects.MutateStack(args: {
-	Self: Types.Statusify,
-	Effect: Types.EffectInstance,
-	Humanoid: Humanoid,
-	ApplyValue: number,
-})
-	local self = args.Self
+function Effects.MutateStack(
+	self: Types.Statusify,
+	args: {
+		Effect: Types.EffectInstance,
+		Humanoid: Humanoid,
+		ApplyValue: number,
+	}
+)
 	local effect = args.Effect
 	local humanoid = args.Humanoid
 	local applyValue = args.ApplyValue
@@ -41,8 +41,7 @@ function Effects.MutateStack(args: {
 	})
 
 	if effect.Stacks == 0 then
-		Effects.Remove({
-			Self = self,
+		self:_RemoveEffect({
 			Humanoid = humanoid,
 			EffectName = effect.Name,
 			Action = "effect",
@@ -60,18 +59,18 @@ end
 	This callback is ran on a seperate thread so it cannot halt execution if it takes longer to complete. 
 	When the callback finishes, the thread will automatically remove itself from the player.
 
-	@param Self The object that will be referenced from.
 	@param Effect The effect instance that that callbacks will run from
 	@param Message The event message that took place and determines what callback to run.
 	@param Humanoid The humanoid the effect is running off of.
 ]]
-function Effects.RunCallback(args: {
-	Self: Types.Statusify,
-	Effect: Types.EffectInstance,
-	Message: Types.EventMessage,
-	Humanoid: Humanoid,
-})
-	local self = args.Self
+function Effects.RunCallback(
+	self: Types.Statusify,
+	args: {
+		Effect: Types.EffectInstance,
+		Message: Types.EventMessage,
+		Humanoid: Humanoid,
+	}
+)
 	local effect = args.Effect
 	local message = args.Message
 	local humanoid = args.Humanoid
@@ -131,16 +130,16 @@ end
 --[[
     Adds an effect to a humanoid to make it active.
 	
-	@param Self The object that will be referenced from.
 	@param Humanoid The humanoid that will targetted with this new effect.
 	@param Effect The effect instance that will be added to the humanoid.
 ]]
-function Effects.Add(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	Effect: Types.EffectInstance,
-})
-	local self = args.Self
+function Effects.Add(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		Effect: Types.EffectInstance,
+	}
+)
 	local humanoid = args.Humanoid
 	local effect = args.Effect
 	local effectName = effect.Name
@@ -163,9 +162,8 @@ function Effects.Add(args: {
 	end
 
 	activeEffects[effectName] = effect
-	Effects.RunCallback({
+	self:_RunCallback({
 		Message = "apply",
-		Self = self,
 		Humanoid = humanoid,
 		Effect = effect,
 	})
@@ -190,18 +188,18 @@ end
 	- "all": All active effects under the humanoid will be removed.
 	- "effect": The specific active effect will be removed from the humanoid.
 
-	@param Self The object that will be referenced from.
 	@param Action Determines how removal will work.
 	@param Humanoid The humanoid to remove from.
 	@param EffectName The effect name that is considered active.
 ]]
-function Effects.Remove(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string?,
-	Action: "all" | "effect",
-})
-	local self = args.Self
+function Effects.Remove(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string?,
+		Action: "all" | "effect",
+	}
+)
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 	local action = args.Action
@@ -215,9 +213,8 @@ function Effects.Remove(args: {
 				EffectName = effect.Name,
 				Definition = effect.Definition,
 			})
-			Effects.RunCallback({
+			self:_RunCallback({
 				Message = "remove",
-				Self = self,
 				Humanoid = humanoid,
 				Effect = effect,
 			})
