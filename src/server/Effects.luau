@@ -3,7 +3,6 @@
 const Types = require("./Types")
 const Logger = require("./Logger")
 const Utilities = require("./Utilities")
-const Replication = require("./Replication")
 
 local Effects = {}
 
@@ -31,14 +30,6 @@ function Effects.MutateStack(
 	local previous = effect.Stacks
 	effect.Stacks = math.clamp(effect.Stacks + applyValue, 0, effect.Definition.MaxStacks :: number)
 	local subsequent = effect.Stacks
-
-	Replication.Replicate({
-		Self = self,
-		Humanoid = humanoid,
-		Message = "update",
-		EffectName = effect.Name,
-		Definition = effect.Definition,
-	})
 
 	if effect.Stacks == 0 then
 		self:_RemoveEffect({
@@ -167,8 +158,7 @@ function Effects.Add(
 		Humanoid = humanoid,
 		Effect = effect,
 	})
-	Replication.Replicate({
-		Self = self,
+	self:_Replicate({
 		Message = "apply",
 		Definition = effect.Definition,
 		Humanoid = humanoid,
@@ -206,8 +196,7 @@ function Effects.Remove(
 
 	local function process(humanoid: Humanoid, effect: Types.EffectInstance?)
 		if effect then
-			Replication.Replicate({
-				Self = self,
+			self:_Replicate({
 				Humanoid = humanoid,
 				Message = "remove",
 				EffectName = effect.Name,

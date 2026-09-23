@@ -13,18 +13,18 @@ local Replication = {}
 	
 	@param Definition The definition or template of an status effect.
 	@param Message The event string that the client will see to know what part of the lifecycle the event is at.
-	@param Self The object that will be referenced from.
 	@param Humanoid The humanoid that this effect is targetted towards.
 	@param EffectName The name of the effect.
 ]]
-function Replication.Replicate(args: {
-	Definition: Types.EffectDefinition,
-	Message: Types.EventMessage,
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string,
-})
-	local self = args.Self
+function Replication.Replicate(
+	self: Types.Statusify,
+	args: {
+		Definition: Types.EffectDefinition,
+		Message: Types.EventMessage,
+		Humanoid: Humanoid,
+		EffectName: string,
+	}
+)
 	if not self._replicationEvent then
 		return
 	end

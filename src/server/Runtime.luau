@@ -35,8 +35,7 @@ function Runtime.Create(self: Types.Statusify)
 						Humanoid = humanoid,
 						Effect = effect,
 					})
-					Replication.Replicate({
-						Self = self,
+					self:_Replicate({
 						Definition = effect.Definition,
 						Message = "tick",
 						EffectName = effectName,

@@ -22,6 +22,7 @@ Api._MutateStack = Effects.MutateStack
 Api._RunCallback = Effects.RunCallback
 Api._AddEffect = Effects.Add
 Api._RemoveEffect = Effects.Remove
+Api._Replicate = Replication.Replicate
 
 --[[
 	Constructs a new Statusify object.
@@ -277,19 +278,6 @@ function Api.Apply(
 	end
 
 	local function operateBehavior(mutateStack: boolean, resetDuration: boolean)
-		Replication.Replicate({
-			Self = self,
-			Message = "update",
-			EffectName = effectName,
-			Definition = definition,
-			Humanoid = humanoid,
-		})
-		self:_RunCallback({
-			Message = "update",
-			Effect = effect,
-			Humanoid = humanoid,
-		})
-
 		if mutateStack then
 			self:_MutateStack({
 				Humanoid = humanoid,
@@ -301,6 +289,18 @@ function Api.Apply(
 		if resetDuration then
 			effect.ExpireTime = now + definition.Duration :: number
 		end
+
+		self:_Replicate({
+			Message = "update",
+			EffectName = effectName,
+			Definition = definition,
+			Humanoid = humanoid,
+		})
+		self:_RunCallback({
+			Message = "update",
+			Effect = effect,
+			Humanoid = humanoid,
+		})
 	end
 
 	if definition.StackBehavior == "ignore" then

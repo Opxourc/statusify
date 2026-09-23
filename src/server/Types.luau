@@ -58,6 +58,10 @@ export type Statusify = {
 	_RunCallback: (self: Statusify, args: { Effect: EffectInstance, Message: EventMessage, Humanoid: Humanoid }) -> (),
 	_AddEffect: (self: Statusify, args: { Humanoid: Humanoid, Effect: EffectInstance }) -> (),
 	_RemoveEffect: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string?, Action: "all" | "effect" }) -> (),
+	_Replicate: (
+		self: Statusify,
+		args: { Definition: EffectDefinition, Message: EventMessage, Humanoid: Humanoid, EffectName: string }
+	) -> (),
 
 	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
 	_runtimeConnection: RBXScriptConnection?,
