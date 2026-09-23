@@ -7,9 +7,7 @@ local Watcher = {}
 	Creates a new watcher connection that observe ".Destroying" events on humanoids to clean them up.
 
 	Only one watcher connection should exist per humanoid.
-
 	@param humanoid The humanoid that will be observed.
-	@return RBXScriptConnection or nil if creation failed.
 ]]
 function Watcher.Create(self: Types.Statusify, humanoid: Humanoid)
 	self:_DestroyWatcher(humanoid)
