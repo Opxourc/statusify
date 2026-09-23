@@ -12,12 +12,12 @@ local Runtime = {}
 	@param self The object that will be referenced from.
 	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Runtime.Create(self: Types.StatusifyInternal): RBXScriptConnection
+function Runtime.Create(self: Types.Statusify): RBXScriptConnection
 	Runtime.Destroy(self)
 
 	return game:GetService("RunService").Heartbeat:Connect(function()
 		local now = workspace:GetServerTimeNow()
-		for humanoid, activeEffects in self.ActiveEffects do
+		for humanoid, activeEffects in self._activeEffects do
 			if not activeEffects then
 				continue
 			end
@@ -59,10 +59,10 @@ end
 	Destroys and disconnects the current runtime connection.
 	@param self The object that will be referenced from.
 ]]
-function Runtime.Destroy(self: Types.StatusifyInternal)
-	if self.RuntimeConnection then
-		self.RuntimeConnection:Disconnect()
-		self.RuntimeConnection = nil
+function Runtime.Destroy(self: Types.Statusify)
+	if self._runtimeConnection then
+		self._runtimeConnection:Disconnect()
+		self._runtimeConnection = nil
 	end
 end
 

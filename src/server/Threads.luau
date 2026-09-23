@@ -15,7 +15,7 @@ local Threads = {}
 	@param Thread The thread that will be stored.
 ]]
 function Threads.Add(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string,
 	Thread: thread,
@@ -25,10 +25,10 @@ function Threads.Add(args: {
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
-	local activeThreads = self.ActiveThreads[humanoid]
+	local activeThreads = self._activeThreads[humanoid]
 	if not activeThreads then
 		activeThreads = {}
-		self.ActiveThreads[humanoid] = activeThreads
+		self._activeThreads[humanoid] = activeThreads
 	end
 	assert(activeThreads ~= nil)
 
@@ -57,7 +57,7 @@ end
 	@param EffectName The effect name that hosted the threads.
 ]]
 function Threads.Cancel(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string?,
 	Action: "all" | "effect",
@@ -96,7 +96,7 @@ function Threads.Cancel(args: {
 
 		cancelThreads(threads)
 		activeThreads[effectName] = nil
-		self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+		self._activeThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
 
 		Logger.Info(`Cancelled a thread under ({effectName}) status effect for ({humanoid:GetFullName()}).`)
 	elseif action == "all" then
@@ -115,7 +115,7 @@ function Threads.Cancel(args: {
 			activeThreads[name] = nil
 		end
 
-		self.ActiveThreads[humanoid] = nil
+		self._activeThreads[humanoid] = nil
 		Logger.Info(`Cancelled all threads for ({humanoid:GetFullName()}).`)
 	else
 		Logger.Info(`Unknown action provided for cancelling threads. Got: ({action}).`)

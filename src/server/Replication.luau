@@ -20,12 +20,12 @@ local Replication = {}
 function Replication.Replicate(args: {
 	Definition: Types.EffectDefinition,
 	Message: Types.EventMessage,
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string,
 })
 	local self = args.Self
-	if not self.ReplicationEvent then
+	if not self._replicationEvent then
 		return
 	end
 
@@ -62,7 +62,7 @@ function Replication.Replicate(args: {
 		return
 	end
 
-	self.ReplicationEvent:FireAllClients({
+	self._replicationEvent:FireAllClients({
 		EffectName = effectName,
 		Message = message,
 		Target = humanoid,

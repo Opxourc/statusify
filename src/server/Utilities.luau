@@ -10,7 +10,7 @@ local Utilities = {}
 	@return Asserted Types.StatusifyInternal.
 ]]
 function Utilities.AnnotateSelf(a: any)
-	return a :: Types.StatusifyInternal
+	return a :: Types.Statusify
 end
 
 --[[
@@ -49,7 +49,7 @@ end
 
 	@return number that represents the count.
 ]]
-function Utilities.GetActiveCount(self: Types.StatusifyInternal, humanoid: Humanoid): number
+function Utilities.GetActiveCount(self: Types.Statusify, humanoid: Humanoid): number
 	local activeEffects = Utilities.GetActiveEffects({
 		Self = self,
 		Humanoid = humanoid,
@@ -77,7 +77,7 @@ end
 	@return Tuple of ActiveEffects (for all under humanoid) and Effects (for effect name)).
 ]]
 function Utilities.GetActiveEffects(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string?,
 }): ({ [string]: Types.EffectInstance? }?, Types.EffectInstance?)
@@ -85,7 +85,7 @@ function Utilities.GetActiveEffects(args: {
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
-	local activeEffects = self.ActiveEffects[humanoid]
+	local activeEffects = self._activeEffects[humanoid]
 	if not activeEffects then
 		return nil, nil
 	end
@@ -110,7 +110,7 @@ end
 	@return Tuple of ActiveThreads (for all under humanoid), Threads (for effect name), and boolean (for if the specific thread exists).
 ]]
 function Utilities.GetActiveThreads(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string?,
 	Thread: thread?,
@@ -120,7 +120,7 @@ function Utilities.GetActiveThreads(args: {
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
 
-	local activeThreads = self.ActiveThreads[humanoid]
+	local activeThreads = self._activeThreads[humanoid]
 	if not activeThreads then
 		return nil, nil, nil
 	end

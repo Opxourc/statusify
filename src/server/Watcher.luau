@@ -15,7 +15,7 @@ local Watcher = {}
 
 	@return RBXScriptConnection or nil if creation failed.
 ]]
-function Watcher.Create(self: Types.StatusifyInternal, humanoid: Humanoid): RBXScriptConnection
+function Watcher.Create(self: Types.Statusify, humanoid: Humanoid): RBXScriptConnection
 	Watcher.Destroy(self, humanoid)
 
 	return humanoid.Destroying:Connect(function()
@@ -38,11 +38,11 @@ end
 	@param self The object that will be referenced from.
 	@param humanoid The humanoid that will have it's connection removed.
 ]]
-function Watcher.Destroy(self: Types.StatusifyInternal, humanoid: Humanoid)
-	local connection = self.WatcherConnections[humanoid]
+function Watcher.Destroy(self: Types.Statusify, humanoid: Humanoid)
+	local connection = self._watcherConnections[humanoid]
 	if connection then
 		connection:Disconnect()
-		self.WatcherConnections[humanoid] = nil
+		self._watcherConnections[humanoid] = nil
 	end
 end
 

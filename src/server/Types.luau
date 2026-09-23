@@ -1,4 +1,3 @@
--- Describes the template for an effect
 export type EffectDefinition = {
 	Duration: number?,
 	Interval: number?,
@@ -10,14 +9,14 @@ export type EffectDefinition = {
 	}?,
 	Throttle: number?,
 	MaxStacks: number?,
-	StackBehavior: "refresh" | "stack" | "ignore" | "stack_refresh"?,
+	StackBehavior: StackBehavior?,
+
 	OnTick: ((context: EffectContext) -> ())?,
 	OnApply: ((context: EffectContext) -> ())?,
 	OnRemove: ((context: EffectContext) -> ())?,
 	OnUpdate: ((context: EffectContext) -> ())?,
 }
 
--- The contract for a live effect that is running
 export type EffectInstance = {
 	Definition: EffectDefinition,
 	Name: string,
@@ -28,7 +27,6 @@ export type EffectInstance = {
 	NextAvailableApplyTime: number,
 }
 
--- The context of the running effect at a given state.
 export type EffectContext = {
 	Target: Humanoid,
 	Stacks: number,
@@ -37,7 +35,6 @@ export type EffectContext = {
 	ExpireTime: number,
 }
 
--- Public interface for scripts trying to use the framework
 export type Statusify = {
 	GetActive: (self: Statusify, args: { Humanoid: Humanoid, EffectName: string }) -> EffectInstance?,
 	GetRegistered: (self: Statusify, effectName: string) -> EffectDefinition?,
@@ -50,30 +47,17 @@ export type Statusify = {
 		self: Statusify,
 		args: { Action: "effect" | "all" | "decrement", EffectName: string?, Humanoid: Humanoid }
 	) -> (),
+
+	_watcherConnections: { [Humanoid]: RBXScriptConnection? },
+	_runtimeConnection: RBXScriptConnection?,
+	_maxEffectsPerHumanoid: number,
+	_replicationEvent: RemoteEvent?,
+	_registeredEffects: { [string]: EffectDefinition? },
+	_activeEffects: { [Humanoid]: { [string]: EffectInstance? }? },
+	_activeThreads: { [Humanoid]: { [string]: { [thread]: boolean? }? }? },
 }
 
--- Private interface for the framework to work with
-export type StatusifyInternal = Statusify & {
-	WatcherConnections: { [Humanoid]: RBXScriptConnection? },
-	RuntimeConnection: RBXScriptConnection?,
-	MaxEffectsPerHumanoid: number,
-	ReplicationEvent: RemoteEvent?,
-	RegisteredEffects: { [string]: EffectDefinition? },
-	ActiveEffects: { [Humanoid]: { [string]: EffectInstance? }? },
-	ActiveThreads: { [Humanoid]: { [string]: { [thread]: boolean? }? }? },
-}
-
--- Package structure to be sent over to clients
-export type Replication = {
-	Message: EventMessage,
-	EffectName: string,
-	ExpireTime: number,
-	StartTime: number,
-	Target: Humanoid,
-	Stacks: number,
-}
-
--- Messages that are sent for a package
 export type EventMessage = "apply" | "tick" | "remove" | "update"
+export type StackBehavior = "refresh" | "stack" | "ignore" | "stack_refresh"
 
 return table.freeze({})

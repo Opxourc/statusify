@@ -20,7 +20,7 @@ local Effects = {}
 	@param ApplyValue The application value to apply to the stacks, not the final value.
 ]]
 function Effects.MutateStack(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Effect: Types.EffectInstance,
 	Humanoid: Humanoid,
 	ApplyValue: number,
@@ -68,7 +68,7 @@ end
 	@param Humanoid The humanoid the effect is running off of.
 ]]
 function Effects.RunCallback(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Effect: Types.EffectInstance,
 	Message: Types.EventMessage,
 	Humanoid: Humanoid,
@@ -103,7 +103,7 @@ function Effects.RunCallback(args: {
 			end
 
 			activeThreads[effect.Name] = Utilities.NilOnEmpty(threads)
-			self.ActiveThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
+			self._activeThreads[humanoid] = Utilities.NilOnEmpty(activeThreads)
 		end)
 
 		return thread
@@ -139,7 +139,7 @@ end
 	@param Effect The effect instance that will be added to the humanoid.
 ]]
 function Effects.Add(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	Effect: Types.EffectInstance,
 })
@@ -148,10 +148,10 @@ function Effects.Add(args: {
 	local effect = args.Effect
 	local effectName = effect.Name
 
-	local activeEffects = self.ActiveEffects[humanoid]
+	local activeEffects = self._activeEffects[humanoid]
 	if not activeEffects then
 		activeEffects = {}
-		self.ActiveEffects[humanoid] = activeEffects
+		self._activeEffects[humanoid] = activeEffects
 		Watcher.Create(self, humanoid)
 	end
 	assert(activeEffects)
@@ -161,7 +161,7 @@ function Effects.Add(args: {
 	end
 
 	local effectCount = Utilities.GetActiveCount(self, humanoid)
-	if effectCount >= self.MaxEffectsPerHumanoid then
+	if effectCount >= self._maxEffectsPerHumanoid then
 		return
 	end
 
@@ -199,7 +199,7 @@ end
 	@param EffectName The effect name that is considered active.
 ]]
 function Effects.Remove(args: {
-	Self: Types.StatusifyInternal,
+	Self: Types.Statusify,
 	Humanoid: Humanoid,
 	EffectName: string?,
 	Action: "all" | "effect",
@@ -246,9 +246,9 @@ function Effects.Remove(args: {
 
 		process(humanoid, effect)
 		activeEffects[effectName] = nil
-		self.ActiveEffects[humanoid] = Utilities.NilOnEmpty(activeEffects)
+		self._activeEffects[humanoid] = Utilities.NilOnEmpty(activeEffects)
 
-		if not self.ActiveEffects[humanoid] then
+		if not self._activeEffects[humanoid] then
 			Watcher.Destroy(self, humanoid)
 		end
 
@@ -269,7 +269,7 @@ function Effects.Remove(args: {
 			activeEffects[name] = nil
 		end
 
-		self.ActiveEffects[humanoid] = nil
+		self._activeEffects[humanoid] = nil
 		Watcher.Destroy(self, humanoid)
 
 		Logger.Info(`Removed all status effects for ({humanoid:GetFullName()}).`)
