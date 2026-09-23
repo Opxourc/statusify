@@ -16,7 +16,7 @@ function Logger.Info(message: string)
 		return
 	end
 
-	print(`[Statusify][INFO]\n {message}`)
+	print(`\n[Statusify][INFO]\n{message}`)
 end
 
 --[[
@@ -29,7 +29,7 @@ end
 ]]
 function Logger.Severe(message: string)
 	local source, line = debug.info(2, "sl")
-	warn(`[Statusify][SEVERE]\n {source}:{line}\n {debug.traceback(message, 2)}`)
+	warn(`\n[Statusify][SEVERE]\n\nSOURCE:\n{source}:{line}\n\nTRACEBACK:\n{debug.traceback(message, 2)}`)
 end
 
 return table.freeze(Logger)
