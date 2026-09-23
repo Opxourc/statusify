@@ -9,18 +9,18 @@ local Threads = {}
 --[[
 	Adds a new thread to be ActiveThreads table for a Statusify object.
 
-	@param Self The object that will be referenced from.
 	@param Humanoid The humanoid to check from.
 	@param EffectName The effect name is hosting the thread.
 	@param Thread The thread that will be stored.
 ]]
-function Threads.Add(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string,
-	Thread: thread,
-})
-	local self = args.Self
+function Threads.Add(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string,
+		Thread: thread,
+	}
+)
 	local thread = args.Thread
 	local humanoid = args.Humanoid
 	local effectName = args.EffectName
@@ -51,21 +51,21 @@ end
 	- "all": All running threads under the humanoid will be cancelled.
 	- "effect": All running threads under an active effect under a humanoid will be cancelled.
 
-	@param Self The object that will be referenced from.
 	@param Action Determines how cancelling will work.
 	@param Humanoid The humanoid to cancel from.
 	@param EffectName The effect name that hosted the threads.
 ]]
-function Threads.Cancel(args: {
-	Self: Types.Statusify,
-	Humanoid: Humanoid,
-	EffectName: string?,
-	Action: "all" | "effect",
-})
+function Threads.Cancel(
+	self: Types.Statusify,
+	args: {
+		Humanoid: Humanoid,
+		EffectName: string?,
+		Action: "all" | "effect",
+	}
+)
 	local effectName = args.EffectName
 	local humanoid = args.Humanoid
 	local action = args.Action
-	local self = args.Self
 
 	local function cancelThreads(threadTable: { [thread]: boolean? }?)
 		if threadTable then

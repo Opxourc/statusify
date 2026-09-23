@@ -1,26 +1,21 @@
 --!strict
 
 const Types = require("./Types")
-const Threads = require("./Threads")
-
 local Watcher = {}
 
 --[[
-	Creates a new watcher connection that observe '.Destroying' events on humanoids to clean them up.
+	Creates a new watcher connection that observe ".Destroying" events on humanoids to clean them up.
 
 	Only one watcher connection should exist per humanoid.
 
-	@param self The object that will be referenced from.
 	@param humanoid The humanoid that will be observed.
-
 	@return RBXScriptConnection or nil if creation failed.
 ]]
 function Watcher.Create(self: Types.Statusify, humanoid: Humanoid)
 	self:_DestroyWatcher(humanoid)
 	self._watcherConnections[humanoid] = humanoid.Destroying:Connect(function()
 		self:_DestroyWatcher(humanoid)
-		Threads.Cancel({
-			Self = self,
+		self:_CancelThread({
 			Humanoid = humanoid,
 			Action = "all",
 		})
@@ -33,8 +28,6 @@ end
 
 --[[
 	Destroy and disconnect a watcher connection for a humanoid.
-
-	@param self The object that will be referenced from.
 	@param humanoid The humanoid that will have it's connection removed.
 ]]
 function Watcher.Destroy(self: Types.Statusify, humanoid: Humanoid)

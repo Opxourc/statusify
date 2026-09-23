@@ -14,6 +14,8 @@ local Api = {}
 Api.__index = Api
 Api._CreateWatcher = Watcher.Create
 Api._DestroyWatcher = Watcher.Destroy
+Api._AddThread = Threads.Add
+Api._CancelThread = Threads.Cancel
 
 --[[
 	Constructs a new Statusify object.
@@ -52,9 +54,8 @@ function Api.Destroy(self: Types.Statusify)
 	Runtime.Destroy(self)
 	for humanoid, effects in self._activeEffects do
 		self:_DestroyWatcher(humanoid)
-		Threads.Cancel({
+		self:_CancelThread({
 			Humanoid = humanoid,
-			Self = self,
 			Action = "all",
 		})
 
@@ -210,8 +211,7 @@ function Api.Unregister(
 				EffectName = effectName,
 				Action = "effect",
 			})
-			Threads.Cancel({
-				Self = self,
+			self:_CancelThread({
 				Humanoid = humanoid,
 				Action = "effect",
 				EffectName = effectName,

@@ -2,7 +2,6 @@
 
 const Types = require("./Types")
 const Logger = require("./Logger")
-const Threads = require("./Threads")
 const Utilities = require("./Utilities")
 const Replication = require("./Replication")
 
@@ -122,8 +121,7 @@ function Effects.RunCallback(args: {
 		return
 	end
 
-	Threads.Add({
-		Self = self,
+	self:_AddThread({
 		Humanoid = humanoid,
 		EffectName = effect.Name,
 		Thread = thread,
