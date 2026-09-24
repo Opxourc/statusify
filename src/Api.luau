@@ -291,6 +291,7 @@ function Api.Apply(
 		end
 
 		if resetDuration then
+			effect.StartTime = now
 			effect.ExpireTime = now + definition.Duration :: number
 		end
 
