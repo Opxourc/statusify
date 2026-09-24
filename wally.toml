@@ -1,0 +1,18 @@
+[package]
+name = "opxourc/statusify"
+description = "Framework for status effects on Humanoids."
+version = "0.1.0"
+license = "MIT"
+registry = "https://github.com/UpliftGames/wally-index"
+repository = "https://github.com/Opxourc/statusify"
+realm = "server"
+exclude = ["*"]
+include = [
+    "src",
+    "LICENSE",
+    "README.md",
+    "wally.toml",
+    "pkg.project.json"
+]
+
+[dependencies]
