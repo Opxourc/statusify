@@ -7,7 +7,7 @@ const Utilities = require("./Utilities")
 local Effects = {}
 
 --[[
-	Returns active status effect(s) depending on provided arguements.
+	Returns active status effect(s) depending on provided arguments.
 
 	@param Humanoid The humanoid to get effects from.
 	@param EffectName The effect to grab effects from. This is optional.
@@ -77,9 +77,6 @@ end
 
 --[[
 	Calls a callback function within an active effect and stores it under the humanoid.
-
-	This callback is ran on a seperate thread so it cannot halt execution if it takes longer to complete. 
-	When the callback finishes, the thread will automatically remove itself from the player.
 
 	@param Effect The effect instance that that callbacks will run from
 	@param Message The event message that took place and determines what callback to run.
@@ -159,7 +156,7 @@ end
 --[[
     Adds an effect to a humanoid to make it active.
 	
-	@param Humanoid The humanoid that will targetted with this new effect.
+	@param Humanoid The humanoid that will targeted with this new effect.
 	@param Effect The effect instance that will be added to the humanoid.
 ]]
 function Effects.Add(

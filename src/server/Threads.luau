@@ -7,11 +7,11 @@ const Logger = require("./Logger")
 local Threads = {}
 
 --[[
-	Returns active thread(s) depending on provided arguements.
+	Returns active thread(s) depending on provided arguments.
 
 	@param Humanoid The humanoid to get threads from.
 	@param EffectName The effect to grab threads from. This is optional.
-	@param Thread The specific thread to look for that's under a effect. This is optional.
+	@param Thread The specific thread to look for that's under an effect. This is optional.
 
 	@return Tuple of ActiveThreads (for all under humanoid), Threads (for effect name), and boolean (for if the specific thread exists).
 ]]
@@ -47,7 +47,7 @@ function Threads.GetActiveThreads(
 end
 
 --[[
-	Adds a new thread to be ActiveThreads table for a Statusify object.
+	Adds a new thread so it can be stored and be referenced later.
 
 	@param Humanoid The humanoid to check from.
 	@param EffectName The effect name is hosting the thread.
@@ -84,7 +84,7 @@ function Threads.Add(
 end
 
 --[[
-	Cancels thread(s) so any callbacks for a effect running are cancelled.
+	Cancels thread(s) that are running so they can stop execution. 
 
 	Actions:
 

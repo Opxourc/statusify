@@ -6,13 +6,13 @@ const Types = require("./Types")
 local Replication = {}
 
 --[[
-	Sends a replication event to the client with a message and packet of information so the client can do any form of replication.
+	Sends a replication event to the client with a message and packet of information.
 
 	If there's no ReplicationEvent, no replication event will be sent.
 	
 	@param Definition The definition or template of an status effect.
 	@param Message The event string that the client will see to know what part of the lifecycle the event is at.
-	@param Humanoid The humanoid that this effect is targetted towards.
+	@param Humanoid The humanoid that this effect is targeted towards.
 	@param EffectName The name of the effect.
 ]]
 function Replication.Replicate(

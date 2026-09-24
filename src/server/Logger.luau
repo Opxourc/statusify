@@ -7,9 +7,9 @@ local Logger = {}
 	Output a "LOG" message for informational context.
 
 	This function will check the code environment.
-	If the environment is at studio time, then no output will occur.
+	When running in Studio, no output will occur.
 
-	@param message The string message that will outputted.
+	@param message The string message that will printed.
 ]]
 function Logger.info(message: string)
 	if not inStudio then
@@ -20,12 +20,12 @@ function Logger.info(message: string)
 end
 
 --[[
-	Output a "SERVERE" message that will result in a warning.
+	Output a "SEVERE" message that will result in a warning.
 
 	This should be used in cases where the occurence is invalid, bugged, or shouldn't have happened and should be addressed.
-	The message will outputted regardless if the code environment is in studio or live.
+	The message will printed regardless if the code environment is running in in Studio or in production.
 
-	@param message The string message that will be traced back and outputted.
+	@param message The string message that will be traced back and printed.
 ]]
 function Logger.severe(message: string)
 	local source, line = debug.info(2, "sl")

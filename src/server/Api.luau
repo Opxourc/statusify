@@ -44,13 +44,13 @@ function Api.new(args: {
 
 	local self = (
 		setmetatable({
-			_maxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid, -- The max number of effects a humanoid can take at a moment
-			_replicationEvent = replicationEvent, -- This will be used to send replication events to clients
-			_watcherConnections = {}, -- Connections that are dynamically created and destroyed to clean up humanoids
-			_registeredEffects = {}, -- These are effects that are considered valid
-			_activeEffects = {}, -- Effects that are currently running from an effect on a humanoid
-			_activeThreads = {}, -- Threads that are currently running from an effect on a humanoid
-			_runtimeConnection = nil, -- Connection that runs the lifecycle of currently running effects
+			_maxEffectsPerHumanoid = maxEffectsPerHumanoid or Defaults.Constructor.MaxEffectsPerHumanoid,
+			_replicationEvent = replicationEvent,
+			_watcherConnections = {},
+			_registeredEffects = {},
+			_activeEffects = {},
+			_activeThreads = {},
+			_runtimeConnection = nil,
 		}, Api) :: any
 	) :: Types.Statusify
 
@@ -126,8 +126,8 @@ end
 	- Very small positive intervals (e.g. 0.1) are supported, but aren't recommended for effects that may be active in large numbers.
 	- Effect names are case-insensitive, "MYEFFECT" and "myEffect" are considered the same.
 	- If ReplicationEvent was not provided during the construction of this object, then Replicate won't do anything even if all keys under it are 'true'.
-	- All callbacks have a EffectContext arguement called 'context' when being called. You can use this context to get more information on the active effect at that moment.
-	- If you plan to not use a callback, then don't define that specific callback. it will default to nil and won't run when the lifecycle reaches its point.
+	- All callbacks have a EffectContext argument called 'context' when being called. You can use this context to get more information on the active effect at that moment.
+	- If you don't use a certain callback, then don't define that callback. it will default to nil and won't run when the lifecycle reaches its point.
 
 	Defaults:
 
@@ -308,7 +308,6 @@ function Api.Apply(
 	end
 
 	if definition.StackBehavior == "ignore" then
-		-- So "ignore" block doesn't fall into the else block
 	elseif definition.StackBehavior == "stack" then
 		operateBehavior(true, false)
 	elseif definition.StackBehavior == "refresh" then
@@ -327,8 +326,8 @@ end
 
 	Action meanings:
 
-	- remove: Remove the specified status.
-	- removeAll: Remove every status from the humanoid. An effect name does not need to be provided.
+	- effect: Remove the specified status.
+	- all: Remove every status from the humanoid. An effect name does not need to be provided.
 	- decrement: Remove one stack of the effect. If the stack drops to 0, it will be removed automatically.
 	
 	@param Action Determines how removal should work.
@@ -348,7 +347,7 @@ function Api.Remove(
 	local effectName = args.EffectName and Utilities.normalizeEffectName(args.EffectName) or nil
 
 	if (action == "effect" or action == "decrement") and not effectName then
-		Logger.severe(`Attempted removal behavior for a effect status when no effect name was specified.`)
+		Logger.severe(`Attempted removal behavior for an effect status when no effect name was specified.`)
 		return
 	end
 
@@ -386,7 +385,7 @@ end
 --[[
 	Returns the registered EffectDefinition for the given effect name.
 
-	@param effectName The effect's name that will be checked for registeration.
+	@param effectName The effect's name that will be checked for registration.
 	@return EffectDefinition or nil if not found.
 ]]
 function Api.GetRegistered(self: Types.Statusify, effectName: string): Types.EffectDefinition?
