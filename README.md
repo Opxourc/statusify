@@ -26,13 +26,9 @@ The current implementation is split across the following files:
 
 ## How to grab it
 
-There's three ways you can use this framework for your Roblox place.
-
 1. This framework is already set up for [Rojo](https://rojo.space/). You can use Git to pull to your local machine and quickly sync to a Roblox place and start running it.
 
-2. You can grab it from [Wally](https://wally.run/), the package manager for Roblox development. Probably the safest and most convient option if you're already using Rojo.
-
-3. Grab it from the Roblox Creator Hub. Note that the framework will come in as a package so you can optionally auto-update to the latest version or roll back when needed.
+2. You can grab it from [Wally](https://wally.run/package/opxourc/statusify), the package manager for Roblox development. Probably the safest and most convient option if you're already using Rojo.
 
 ## Constructor
 
