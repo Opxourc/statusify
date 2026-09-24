@@ -124,7 +124,7 @@ function Effects.RunCallback(
 		return thread
 	end
 
-	local thread = nil
+	local thread: thread? = nil
 	if message == "apply" then
 		if definition.OnApply then
 			thread = createThread(definition.OnApply)
@@ -146,11 +146,13 @@ function Effects.RunCallback(
 		return
 	end
 
-	self:_AddThread({
-		Humanoid = humanoid,
-		EffectName = effect.Name,
-		Thread = thread,
-	})
+	if thread then
+		self:_AddThread({
+			Humanoid = humanoid,
+			EffectName = effect.Name,
+			Thread = thread,
+		})
+	end
 end
 
 --[[

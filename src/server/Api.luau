@@ -66,7 +66,7 @@ end
 ]]
 function Api.Destroy(self: Types.Statusify)
 	Runtime.Destroy(self)
-	for humanoid, effects in self._activeEffects do
+	for humanoid in self._activeEffects do
 		self:_DestroyWatcher(humanoid)
 		self:_CancelThread({
 			Humanoid = humanoid,

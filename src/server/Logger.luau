@@ -6,8 +6,7 @@ local Logger = {}
 --[[
 	Output a "LOG" message for informational context.
 
-	This function will check the code environment.
-	When running in Studio, no output will occur.
+	When running outside of Studio, no output will occur.
 
 	@param message The string message that will printed.
 ]]
