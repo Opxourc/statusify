@@ -1,14 +1,15 @@
 [package]
 name = "opxourc/statusify"
-description = "Framework for status effects on Humanoids."
+description = "Framework for status effects on Humanoid instances."
 version = "0.1.0"
 license = "MIT"
 registry = "https://github.com/UpliftGames/wally-index"
 repository = "https://github.com/Opxourc/statusify"
 realm = "server"
-exclude = ["*"]
+exclude = ["**"]
 include = [
     "src",
+    "src/**",
     "LICENSE",
     "README.md",
     "wally.toml",
