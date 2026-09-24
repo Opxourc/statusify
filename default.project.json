@@ -12,7 +12,7 @@
           "$path": "example/Demo.server.luau"
         },
         "Source": {
-          "$path": "src/server"
+          "$path": "src"
         }
       }
     },
@@ -38,7 +38,10 @@
       "Shared": {
         "$className": "Folder",
         "Statusify": {
-          "$path": "src/shared"
+          "$className": "Folder",
+          "Names": {
+            "$path": "example/Names.luau"
+          }
         }
       }
     },
