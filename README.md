@@ -1,383 +1,225 @@
 # Statusify
 
-Statusify is a lightweight, server-side Luau framework for managing status effects on Roblox Humanoid instances.
+Statusify is a server-side Luau framework for managing temporary gameplay effects on Roblox Humanoids.
 
-It provides the infrastructure for registering, applying, stacking, ticking, expiring, clearing, and replicating status effects while leaving gameplay-specific behavior to the developer.
+The library is built around a simple pattern:
 
-Statusify can be used for effects such as burns, poison, slows, shields, buffs, debuffs, and other temporary or persistent gameplay states.
+1. register an effect definition
+2. apply it to a Humanoid
+3. let Statusify manage the lifecycle, ticks, duration, stacks, and cleanup
 
-## Why use Statusify?
+This project is intentionally infrastructure-focused. It does not decide visual presentation or gameplay rules for you; it manages the effect lifecycle in a structured and reusable way.
 
-Instead of implementing effect lifecycle management repeatedly for every status effect, you register an effect definition once and let Statusify manage its lifecycle.
+## Source-level overview
 
-Statusify provides:
+The current implementation is split across the following files:
 
-- Effect registration and validation
-- Automatic effect lifecycle management
-- Optional ticking intervals
-- Configurable throttling
-- Stack support with multiple stack behaviors
-- Duration and expiration management
-- Per-Humanoid effect limits
-- Lifecycle callbacks
-- Optional client replication
-- Automatic cleanup of active effects and connections
+- `src/Api.luau` — public API surface and object lifecycle
+- `src/Types.luau` — type contracts for definitions, instances, context, and the manager
+- `src/Defaults.luau` — default values for effect definitions and constructor arguments
+- `src/Effects.luau` — stack mutation, callback execution, and add/remove behavior
+- `src/Runtime.luau` — runtime loop for ticking and expiration checks
+- `src/Replication.luau` — server-to-client replication logic
+- `src/Threads.luau` — per-effect callback thread tracking
+- `src/Watcher.luau` — humanoid lifecycle cleanup
+- `src/Utilities.luau` — name normalization and context helpers
 
-Statusify is intentionally focused on effect infrastructure, not gameplay presentation or behavior. You decide when effects should be applied and what an effect actually does.
+## How to grab it
 
-## API
+There's three ways you can use this framework for your Roblox place.
 
-All methods that require multiple parameters use a single consolidated argument table, excluding `self`.
+1. This framework is already set up for [Rojo](https://rojo.space/). You can use Git to pull to your local machine and quickly sync to a Roblox place and start running it.
 
-### Module functions
+2. You can grab it from [Wally](https://wally.run/), the package manager for Roblox development. Probably the safest and most convient option if you're already using Rojo.
 
-#### New
+3. Grab it from the Roblox Creator Hub. Note that the framework will come in as a package so you can optionally auto-update to the latest version or roll back when needed.
 
-```lua
-New(args: {
-	MaxEffectsPerHumanoid: number?,
-	ReplicationEvent: RemoteEvent,
-}): Types.Statusify?
-```
+## Constructor
 
-**Constructs the Statusify manager.**
-
-Statusify uses a singleton model, meaning only one manager can exist at a time. Attempting to construct another manager while one already exists will fail.
-
-#### Parameters
-- **MaxEffectsPerHumanoid** — The maximum number of unique active effects a Humanoid can have at one time. If omitted, the default value is 3.
-
-- **ReplicationEvent** — The RemoteEvent used for optional server-to-client effect replication. This should be configured before constructing the manager if replication will be used.
-
-##### Example
+The public manager is created with `Statusify.new(...)`.
 
 ```lua
-local effectManager = Statusify.New({
+local Statusify = require(script.Parent.Source.Api)
+
+local statusify = Statusify.new({
     MaxEffectsPerHumanoid = 5,
-    ReplicationEvent = StatusEffectEvent,
+    ReplicationEvent = nil,
 })
 ```
 
----
-
-#### GetExistingObject
+### Arguments
 
 ```lua
-GetExistingObject(): Types.Statusify?
+Statusify.new(args: {
+    MaxEffectsPerHumanoid: number?,
+    ReplicationEvent: RemoteEvent?,
+})
 ```
 
-**Returns the currently existing Statusify manager, or nil if one does not exist.**
+- `MaxEffectsPerHumanoid`: maximum number of active effects per Humanoid. Defaults to `3`.
+- `ReplicationEvent`: optional RemoteEvent used for effect replication. If omitted, no replication messages are sent even if `Replicate` flags are enabled.
 
-This can be used when another part of the server needs access to the manager without retaining the original reference returned by New().
+## EffectDefinition
 
----
-
-### Object Methods
-
-Most methods return a boolean indicating whether the requested operation succeeded.
-
-#### Destroy
+`EffectDefinition` is the core configuration object used when registering a status effect.
 
 ```lua
-Destroy()
+export type EffectDefinition = {
+    Duration: number?,
+    Interval: number?,
+    Replicate: {
+        Apply: boolean?,
+        Tick: boolean?,
+        Remove: boolean?,
+        Update: boolean?,
+    }?,
+    Throttle: number?,
+    MaxStacks: number?,
+    StackBehavior: StackBehavior?,
+
+    OnTick: ((context: EffectContext) -> ())?,
+    OnApply: ((context: EffectContext) -> ())?,
+    OnRemove: ((context: EffectContext) -> ())?,
+    OnUpdate: ((context: EffectContext) -> ())?,
+}
 ```
 
-**Destroys the current Statusify manager and releases the resources it owns.**
+### Default values
 
-This includes active effects, runtime state, connections, and other resources managed by the framework.
-
-Once destroyed, a new Statusify manager can be constructed.
-
----
-
-#### RegisterEffect
+These values are defined in `src/server/Defaults.luau` and are applied when omitted:
 
 ```lua
-RegisterEffect(args: {
-	EffectName: string,
-	Definition: Types.EffectDefinition,
-}): boolean
+Duration = 5
+Interval = 1
+MaxStacks = math.huge
+StackBehavior = "stack_refresh"
+Throttle = 0.25
+Replicate = {
+    Apply = true,
+    Tick = true,
+    Remove = true,
+    Update = true,
+}
 ```
 
-**Registers an effect definition so that it can later be applied to `Humanoid`s.**
+### Definition properties
 
-An effect must be registered before it can be applied.
-
-You cannot register the same effect name more than once.
-
-Effect names are case-insensitive. For example, "Burn" and "burn" refer to the same effect.
-
-##### Parameters
-- **EffectName** — The unique name of the effect.
-- **Definition** — The effect definition describing its behavior and lifecycle.
-
-##### Effect definition
-
-The effect definition controls how Statusify manages an effect.
-
-Optional properties are defaulted during registration. Callbacks are not required and remain nil when they are not provided.
-
-See [Defaults](src/server/Defaults.luau) and [Types](src/server/Types.luau) for the complete definitions.
-
----
-
-###### Properties
-
-**Duration**
+#### Duration
 
 ```lua
 Duration: number?
 ```
 
-**The amount of time an effect remains active before it expires.**
+How long a single stack remains active before expiration. This is used as the effect's expiry timeline.
 
-For stacked effects, the exact duration behavior depends on the configured StackBehavior.
-
-Set the value to math.huge for an effect with no automatic expiration.
-
----
-
-**Interval**
+#### Interval
 
 ```lua
 Interval: number?
 ```
 
-**The amount of time between OnTick executions.**
+How often `OnTick` should run. If this value is `<= 0`, ticking is effectively disabled.
 
-A value less than or equal to 0 disables ticking.
-
----
-
-**Throttle**
+#### Throttle
 
 ```lua
 Throttle: number?
 ```
 
-**The minimum amount of time that must pass between applications of the same effect to the same `Humanoid`.**
+Minimum time required before the same effect can be applied again to the same Humanoid. This is checked using `NextAvailableApplyTime`.
 
-A value less than or equal to 0 disables throttling.
-
-If an application is throttled, the application does not take place.
-
----
-
-**MaxStacks**
+#### MaxStacks
 
 ```lua
 MaxStacks: number?
 ```
 
-**The maximum number of stacks the effect can have.**
+Maximum stack count allowed for the effect. `Effects.MutateStack` clamps the stack value to this limit.
 
-Attempting to increase the stack count beyond this value will not increase the stack count.
-
----
-
-**StackBehavior**
-
-**Determines what happens when an effect is applied to a Humanoid that already has that effect.**
-
-Refer to [Stack behavior](#stack-behavior) for more information.
-
----
-
-**Replicate**
-
-**Controls which lifecycle events are sent to the client.**
-
-Refer to [Replication](#replication) for more information.
-
----
-
-###### Callbacks
-
-**Every callback receives a context containing information about the effect at that point in its lifecycle.**
-
-**Context**
-
-The callback context provides:
-
-- **Target** — The Humanoid affected by the effect.
-- **Stacks** — The current number of stacks.
-- **EffectName** — The name of the active effect.
-- **StartTime** — The time at which the effect was applied, based on workspace:GetServerTimeNow().
-- **ExpireTime** — The time at which the effect is currently scheduled to expire. This value can change during the effect's lifetime.
-
-**OnApply** — Runs when the effect is initially applied to a Humanoid.
-
-**OnTick** — Runs whenever the configured Interval is reached while the effect is active.
-
-**OnRemove** — Runs when the effect is completely removed from a Humanoid.
-
-**OnUpdate** — Runs when an existing effect changes state, like stack being added, stack being removed, and effect being refreshed.
-
----
-
-#### UnregisterEffect
+#### StackBehavior
 
 ```lua
-UnregisterEffect(args: {
-	EffectName: string,
-	Terminate: boolean,
-}): boolean
+StackBehavior: "refresh" | "stack" | "ignore" | "stack_refresh"
 ```
 
-**Unregisters an effect definition so that it can no longer be applied.**
+Controls how repeated application behaves when the effect is already active.
 
-An effect can later be registered again with a different definition.
+Supported values:
 
-##### Parameters
+- `"ignore"` — do nothing when the effect is re-applied
+- `"stack"` — add one stack, do not reset duration
+- `"refresh"` — reset the duration, do not add a stack
+- `"stack_refresh"` — add one stack and reset the duration
 
-- **EffectName** — The effect definition to unregister.
-- **Terminate** — Determines whether currently active instances of the effect should be immediately terminated.
+This is enforced in `Api.Apply`.
 
-If `Terminate` is `false`, existing active instances are allowed to finish naturally.
-
-**Be careful when unregistering effects with infinite duration. If such an effect is not terminated, it will remain active until its `Humanoid` dies or is removed.**
-
----
-
-#### ApplyEffect
+#### Replicate
 
 ```lua
-ApplyEffect(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-}): boolean
+Replicate = {
+    Apply = true,
+    Tick = true,
+    Remove = true,
+    Update = true,
+}
 ```
 
-**Applies a registered effect to a `Humanoid`.**
+If set, each lifecycle event can be replicated to clients when that event occurs.
 
-The effect name must correspond to a registered effect definition.
+The actual replication check happens in `src/server/Replication.luau` and only sends messages if:
 
-The framework handles the effect's configured stacking behavior, duration, throttling, lifecycle callbacks, runtime scheduling, and replication.
+- a `ReplicationEvent` was created at manager construction time
+- the relevant `Replicate` flag is true
+- the event message matches the lifecycle step
 
-##### Parameters
+### Callback contract
 
-- **Humanoid** — The `Humanoid` receiving the effect.
-- **EffectName** — The name of the registered effect to apply.
-
----
-
-#### ClearEffect
+Callback signatures are defined under `Types.EffectDefinition`:
 
 ```lua
-ClearEffect(args: {
-	Action: "remove" | "removeAll" | "decrement",
-	EffectName: string?,
-	Humanoid: Humanoid,
-}): boolean
+OnTick: ((context: EffectContext) -> ())?,
+OnApply: ((context: EffectContext) -> ())?,
+OnRemove: ((context: EffectContext) -> ())?,
+OnUpdate: ((context: EffectContext) -> ())?,
 ```
 
-**Remove an effect status(es) through an optional choice of actions.**
-
-##### Parameters
-
-- **Humanoid** — The `Humanoid` whose effects should be modified.
-- **EffectName** — The effect to target. This is optional when using `removeAll`.
-- **Action** — Determines how the effect should be cleared.
-
-##### Available actions:
-
-- **"remove"** — Completely removes the specified effect from the Humanoid. The current stack count does not matter.
-- **"decrement"** — Removes one stack from the specified effect. If the effect reaches zero stacks, it is completely removed.
-- **"removeAll"** — Completely removes every active effect from the Humanoid.
-
-The framework does not decide when an effect should be decremented or removed. The system using Statusify is responsible for deciding when to call these operations.
-
----
-
-#### GetRegisteredEffect
+`EffectContext` looks like this:
 
 ```lua
-GetRegisteredEffect(effectName: string): Types.EffectDefinition?
+export type EffectContext = {
+    Target: Humanoid,
+    Stacks: number,
+    EffectName: string,
+    StartTime: number,
+    ExpireTime: number,
+}
 ```
 
-**Returns an immutable copy of the definition of the provided effect name or `nil` if nothing was found.**
+This is created by `Utilities.createContext(...)` and passed into each callback as `context`.
 
-The returned definition may differ from the original definition because default values are applied during registration.
+#### Callbacks and when they run
 
----
+- `OnApply`: first time the effect is added to a Humanoid
+- `OnTick`: each interval while active
+- `OnUpdate`: when the effect is updated through stack mutation or reapplication
+- `OnRemove`: when the effect is removed or expires
 
-#### GetActiveEffect
+These are invoked through `Effects.RunCallback`, which wraps each callback in `xpcall` and logs errors without crashing the task.
 
-```lua
-GetActiveEffect(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-}): Types.EffectInstance?
-```
+## Public API
 
-**Returns an immutable copy of the active effect instance currently running on the specified `Humanoid`, or `nil` if the effect is not active.**
+All public methods take an argument table and operate as instance methods. The API is defined in `src/server/Api.luau` and typed in `src/server/Types.luau`.
 
----
-
-#### HasEffect
+### Register
 
 ```lua
-HasEffect(args: {
-	Humanoid: Humanoid,
-	EffectName: string,
-}): boolean
-```
-
-**Returns whether the specified `Humanoid` currently has the provided effect active.**
-
----
-
-#### GetNumberOfActiveEffects
-
-```lua
-GetNumberOfActiveEffects(humanoid: Humanoid): number
-```
-
-**Returns the number of unique active effects currently applied to the Humanoid.**
-
-Stacks are not counted as separate effects.
-
-The returned value cannot exceed `MaxEffectsPerHumanoid`.
-
-## Quick start
-
-### 1. Get the Framework
-
-This repository is configured for [Rojo](https://rojo.space/).
-
-If using Rojo, the project structure will [map](default.project.json) to their respective locations in your Roblox place.
-
-You can also grab it from the Roblox Creator Store.
-
-### 2. Create the manager
-
-```lua
-local Statusify = require(pathToStatusify.Api)
-local effectManager = Statusify.New({
-    MaxNumberPerHumanoid = 5,
-    RemoteEvent = nil,
-    HumanoidDirectories = nil,
-})
-```
-
-`Statusify.New()` creates the server-side status-effect manager.
-
-Only one manager/object can exist at a time.
-
-### 3. Register an effect
-
-```lua
-local effectName = "burn"
-
-effectManager:RegisterEffect({
-    EffectName = effectName,
-
+statusify:Register({
+    EffectName = "burn",
     Definition = {
         Duration = 10,
         Interval = 1,
-        Throttle = 0.5,
         MaxStacks = 3,
-        StackBehavior = "refresh",
+        StackBehavior = "stack_refresh",
 
         OnApply = function(context)
             context.Target:TakeDamage(5)
@@ -386,145 +228,261 @@ effectManager:RegisterEffect({
         OnTick = function(context)
             context.Target:TakeDamage(5 * context.Stacks)
         end,
-
-        Replicate = {
-            Apply = true,
-            Tick = false,
-            Remove = true,
-            Update = true,
-        },
     },
 })
 ```
 
-The definition controls the effect's lifecycle, while the callbacks contain the gameplay-specific behavior.
-
-### 4. Apply the effect
+Signature:
 
 ```lua
-local humanoid = player.Character
-    and player.Character:FindFirstChildOfClass("Humanoid")
-
-if humanoid then
-    effectManager:ApplyEffect({
-        Humanoid = humanoid,
-        EffectName = "burn",
-    })
-end
-```
-
-Once applied, Statusify tracks the effect and manages its configured lifecycle.
-
-## Stack behavior
-
-Statusify supports multiple approaches to repeated applications.
-
-### Ignore
-
-```lua
-StackBehavior = "ignore"
-```
-
-If the effect is already active. The new application does nothing.
-
-### Stack
-
-```lua
-StackBehavior = "stack"
-```
-
-Each accepted application increases the stack count by one, up to `MaxStacks`, and resets the effect's duration.
-
-### Refresh
-
-```lua
-StackBehavior = "refresh"
-```
-
-A new application keeps the existing stack count and resets the effect's duration.
-
-Stacks can also be explicitly decremented:
-
-```lua
-effectManager:ClearEffect({
-    Humanoid = humanoid,
-    EffectName = "burn",
-    Action = "decrement",
+Register(self: Statusify, args: {
+    EffectName: string,
+    Definition: EffectDefinition,
 })
 ```
 
-When the final stack is removed, the effect itself is removed, and OnRemove is executed.
+Behavior:
 
-## Built-in lifecycle
+- normalizes the effect name to lowercase
+- rejects duplicate registration names
+- fills missing fields with defaults
+- normalizes the `Replicate` table
+- stores the effect definition under `_registeredEffects`
 
-Once an effect is applied, Statusify manages the configured lifecycle:
-
-1. Validates the registered effect.
-2. Checks application throttling.
-3. Creates or updates the active effect.
-4. Handles the configured stack behavior.
-5. Runs `OnApply` or `OnUpdate` as appropriate.
-6. Schedules configured ticks and expiration.
-7. Runs `OnTick` at the configured interval.
-8. Removes expired effects.
-9. Runs `OnRemove` when an effect is completely removed.
-10. Sends configured replication events to the client.
-
-The developer remains responsible for deciding when an effect should be applied, decremented, or manually removed.
-
-## Humanoid targeting
-
-Statusify associates effects with `Humanoid` instances rather than `Player` instances.
-
-This allows the same framework to support:
-
-- Players
-- NPCs
-- Bosses
-- Dummies
-- Other Humanoid-based entities
-
-The framework does not impose rules about which Humanoids are valid targets. The game using Statusify is responsible for deciding when a Humanoid should receive an effect.
-
-## Replication
-
-Statusify can optionally replicate effect lifecycle information to clients through the configured ReplicationEvent RemoteEvent.
-
-Replication is controlled independently for each effect:
+### Unregister
 
 ```lua
-Replicate = {
-    Apply = true, -- Effect becomes active
-    Tick = false, -- a configured tick occurs
-    Remove = true, -- Effect is completely removed
-    Update = true, -- An existing effect changes state, such as through stacking, decrementing, or refreshing
+statusify:Unregister({
+    EffectName = "burn",
+    Terminate = true,
+})
+```
+
+Signature:
+
+```lua
+Unregister(self: Statusify, args: {
+    EffectName: string,
+    Terminate: boolean,
+})
+```
+
+Behavior:
+
+- removes the effect from the registry
+- if `Terminate == true`, removes all active instances of that effect from every Humanoid
+- if `Terminate == false`, active effects are left alone and may expire naturally
+
+### Apply
+
+```lua
+statusify:Apply({
+    Humanoid = humanoid,
+    EffectName = "burn",
+})
+```
+
+Signature:
+
+```lua
+Apply(self: Statusify, args: {
+    Humanoid: Humanoid,
+    EffectName: string,
+})
+```
+
+Behavior:
+
+- checks whether the effect is registered
+- resolves the active effect for that Humanoid
+- if no active effect exists, creates one and calls `OnApply`
+- if the effect already exists, applies stack/refresh behavior based on `StackBehavior`
+- updates `NextAvailableApplyTime` using the `Throttle`
+- calls `_Replicate({ Message = "update" })` and `_RunCallback({ Message = "update" })` for reapplication changes
+
+Effects are visible as `EffectInstance` values internally:
+
+```lua
+export type EffectInstance = {
+    Definition: EffectDefinition,
+    Name: string,
+    Stacks: number,
+    StartTime: number,
+    ExpireTime: number,
+    NextTickTime: number,
+    NextAvailableApplyTime: number,
 }
 ```
 
-The client is responsible for deciding what to do with the replicated information.
+### Remove
 
-For example, a client could use an **Apply** event to create a visual effect and an **Update** event to update a stack counter.
+```lua
+statusify:Remove({
+    Humanoid = humanoid,
+    Action = "effect",
+    EffectName = "burn",
+})
+```
 
-Statusify does not provide or enforce client-side presentation.
+Signature:
 
-## Example and tests
+```lua
+Remove(self: Statusify, args: {
+    Action: "effect" | "all" | "decrement",
+    EffectName: string?,
+    Humanoid: Humanoid,
+})
+```
 
-A working demonstration is included in the [`example`](example) folder.
+Action behavior:
 
-Tests are included in the [`tests`](tests) folder.
+- `"effect"` — remove the named effect from a Humanoid
+- `"all"` — remove every active effect from that Humanoid
+- `"decrement"` — decrement stack count by 1; remove effect automatically when it reaches zero
 
-These are useful starting points for understanding how Statusify is intended to be integrated and for verifying framework behavior.
+This is the removal API used by runtime expiry and manual cleanup.
 
-## Helpful reminders
+### GetRegistered
 
-- Register effect definitions before attempting to apply them.
-- Effect names are case-insensitive.
-- Effects are associated with `Humanoids` rather than `Player`s.
-- Stacks represent multiple applications of the same active effect; they are not separate effect instances.
-- `OnApply`, `OnTick`, `OnRemove`, and `OnUpdate` are optional.
-- Replication is independently configurable for each lifecycle event.
-- Statusify is intended for trusted server-side use. It does not attempt to act as an anti-exploit or security boundary.
-- Gameplay systems are responsible for supplying valid inputs and deciding when status effects should be applied or removed.
+```lua
+local definition = statusify:GetRegistered("burn")
+```
+
+Signature:
+
+```lua
+GetRegistered(self: Statusify, effectName: string): EffectDefinition?
+```
+
+Returns the effect definition currently registered under that name.
+
+### GetActive
+
+```lua
+local effect = statusify:GetActive({
+    Humanoid = humanoid,
+    EffectName = "burn",
+})
+```
+
+Signature:
+
+```lua
+GetActive(self: Statusify, args: {
+    Humanoid: Humanoid,
+    EffectName: string,
+}): EffectInstance?
+```
+
+Returns the currently active effect instance for the Humanoid and effect name.
+
+### GetActiveCount
+
+```lua
+local count = statusify:GetActiveCount(humanoid)
+```
+
+Signature:
+
+```lua
+GetActiveCount(self: Statusify, humanoid: Humanoid): number
+```
+
+Counts all active effects for a Humanoid.
+
+### Destroy
+
+```lua
+statusify:Destroy()
+```
+
+Signature:
+
+```lua
+Destroy(self: Statusify) -> nil
+```
+
+This tears down the manager, destroys runtime state, disconnects watchers, cancels threads, and clears active runtime data.
+
+## Runtime flow and lifecycle semantics
+
+The lifecycle is driven by a runtime loop and a set of internal helper functions:
+
+- `Effects.Add` adds a new active effect and triggers `apply` replication/callback
+- `Effects.MutateStack` clamps stack counts and removes the effect if it reaches zero
+- `Effects.RunCallback` runs `OnApply`, `OnTick`, `OnUpdate`, and `OnRemove` callbacks in spawned threads
+- `Runtime.Create` / `Runtime.Destroy` manage the continuous expiration/tick loop
+- `Watcher.Create` / `Watcher.Destroy` clean up effects when a Humanoid is removed or dies
+- `Replication.Replicate` sends lifecycle events only if enabled and a replication event exists
+
+## Example
+
+```lua
+local Statusify = require(game.ServerScriptService.Statusify.Source.Api)
+
+local statusify = Statusify.new({
+    MaxEffectsPerHumanoid = 5,
+    ReplicationEvent = nil,
+})
+
+statusify:Register({
+    EffectName = "slow",
+    Definition = {
+        Duration = 6,
+        Interval = 1,
+        Throttle = 0.25,
+        MaxStacks = 2,
+        StackBehavior = "stack",
+
+        OnApply = function(context)
+            print(context.Target.Name .. " is now slowed")
+        end,
+
+        OnTick = function(context)
+            print("Slow tick", context.Stacks)
+        end,
+
+        OnRemove = function(context)
+            print(context.Target.Name .. " is no longer slowed")
+        end,
+    },
+})
+
+local humanoid = workspace.TestHumanoid
+statusify:Apply({
+    Humanoid = humanoid,
+    EffectName = "slow",
+})
+
+statusify:Remove({
+    Humanoid = humanoid,
+    Action = "decrement",
+    EffectName = "slow",
+})
+```
+
+## Notes for source-based use
+
+- Effect names are normalized internally, so casing is not significant.
+- The manager is object-based, and methods are called as instance methods: `statusify:Register(...)`.
+- The implementation distinguishes between public API methods and internal helper methods beginning with underscores, such as `_AddEffect`, `_Replicate`, and `_RunCallback`.
+- `Runtime` and `Watcher` are responsible for the framework lifecycle, while your game code supplies the actual gameplay side effects in callbacks.
+
+## Summary
+
+Statusify is a structured status-effect runtime that centralizes:
+
+- effect registration
+- stack rules
+- lifetime management
+- tick scheduling
+- replication
+- callback execution
+- cleanup logic
+
+It is most useful when you want consistent, reusable status effects without re-implementing the same lifecycle logic in every system.
+
+The returned definition may differ from the original definition because default values are applied during registration.
 
 ## License
 
@@ -532,4 +490,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Contributing
 
-If you want to extend the framework, the easiest place to start is the server-side source under `src/server` and the demo/test files that show how it is used in practice.
+Review [CONTRIBUTING](CONTRIBUTING.md) for more information.
