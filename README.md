@@ -26,9 +26,9 @@ The current implementation is split across the following files:
 
 ## How to grab it
 
-1. This framework is already set up for [Rojo](https://rojo.space/). You can use Git to pull to your local machine and quickly sync to a Roblox place and start running it.
+1. This framework is already set up for [Rojo](https://rojo.space/). Clone the repo and sync to a Roblox place via Rojo.
 
-2. You can grab it from [Wally](https://wally.run/package/opxourc/statusify), the package manager for Roblox development. Probably the safest and most convient option if you're already using Rojo.
+2. You can grab it from [Wally](https://wally.run/package/opxourc/statusify), a package manager for Roblox development.
 
 ## Constructor
 
@@ -82,7 +82,7 @@ export type EffectDefinition = {
 
 ### Default values
 
-These values are defined in `src/server/Defaults.luau` and are applied when omitted:
+These values are defined in `src/Defaults.luau` and are applied when omitted:
 
 ```lua
 Duration = 5
@@ -162,7 +162,7 @@ Replicate = {
 
 If set, each lifecycle event can be replicated to clients when that event occurs.
 
-The actual replication check happens in `src/server/Replication.luau` and only sends messages if:
+The actual replication check happens in `src/Replication.luau` and only sends messages if:
 
 - a `ReplicationEvent` was created at manager construction time
 - the relevant `Replicate` flag is true
@@ -204,7 +204,7 @@ These are invoked through `Effects.RunCallback`, which wraps each callback in `x
 
 ## Public API
 
-All public methods take an argument table and operate as instance methods. The API is defined in `src/server/Api.luau` and typed in `src/server/Types.luau`.
+All public methods take an argument table and operate as instance methods. The API is defined in `src/Api.luau` and typed in `src/Types.luau`.
 
 ### Register
 
